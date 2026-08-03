@@ -1,0 +1,22 @@
+<?php
+/**
+ * Local PayMongo overrides (gitignored).
+ * Copy from this example and fill in your keys:
+ *
+ *   copy admin/payment_config.local.php.example admin/payment_config.local.php
+ */
+if (!defined('PB_PAYMONGO_SECRET_KEY')) {
+    define('PB_PAYMONGO_SECRET_KEY', 'sk_test_YOUR_SECRET');
+}
+if (!defined('PB_PAYMONGO_PUBLIC_KEY')) {
+    define('PB_PAYMONGO_PUBLIC_KEY', 'pk_test_YOUR_PUBLIC');
+}
+if (!defined('PB_SMTP_USER')) {
+    define('PB_SMTP_USER', 'info@foodhauz.bohollander.com');
+}
+if (!defined('PB_SMTP_PASS')) {
+    define('PB_SMTP_PASS', 'YOUR_SMTP_PASSWORD');
+}
+if (!defined('PB_SMTP_HOST')) {
+    define('PB_SMTP_HOST', 'mail.supremecluster.com');
+}

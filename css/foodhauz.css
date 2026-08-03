@@ -1,0 +1,479 @@
+body {
+    font-family: "Lato", sans-serif;
+    margin: 0;
+}
+
+* {
+    font-family: Arial, Helvetica, sans-serif;
+}
+ /* Style the navigation menu */
+.topnav {
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: linear-gradient(135deg, #1a472a 0%, #2d6a4f 45%, #40916c 100%);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 56px;
+    padding: 0 12px 0 16px;
+    z-index: 1000;
+    box-shadow: none;
+    transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.topnav.is-scrolled {
+    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.15);
+}
+
+.main {
+    padding: 16px;
+    margin-top: 56px;
+    margin-bottom: 30px;
+}
+
+#titlepage {
+    color: #fff;
+    padding: 0;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    display: block;
+    background: transparent;
+    white-space: nowrap;
+    flex-shrink: 0;
+    text-decoration: none;
+}
+
+#titlepage:hover {
+    color: #fff;
+    background: transparent;
+    opacity: 0.92;
+}
+
+.topnav-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+    min-width: 0;
+}
+
+.topnav-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.topnav a.topnav-action {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+    padding: 0;
+    line-height: 0;
+    box-sizing: border-box;
+}
+
+.topnav a.topnav-action:hover {
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
+}
+
+.topnav-action-icon {
+    width: 22px;
+    height: 22px;
+    display: block;
+    flex-shrink: 0;
+    margin: 0;
+}
+
+/* Feather cart glyph sits slightly high/right in its viewBox; nudge for optical center */
+.topnav-cart .topnav-action-icon {
+    transform: translate(-1px, 1px);
+}
+
+.topnav-profile.has-avatar,
+.topnav-profile.has-initials {
+    overflow: hidden;
+    padding: 0;
+}
+
+.topnav-profile-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 10px;
+}
+
+.topnav-profile-initials {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
+    user-select: none;
+}
+
+.topnav-menu {
+    font-size: 22px;
+    line-height: 1;
+}
+
+.topnav-cart-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #e63946;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 18px;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+}
+
+.topnav-cart-badge.is-empty {
+    display: none;
+}
+
+/* Style navigation menu links */
+.topnav a {
+    color: #fff;
+    padding: 14px 16px;
+    text-decoration: none;
+    font-size: 17px;
+    display: block;
+}
+
+/* Style the hamburger menu */
+.topnav a.icon,
+.topnav a.topnav-menu {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: static;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    flex-shrink: 0;
+    font-size: 22px;
+    transition: background 0.2s;
+}
+
+.topnav a.icon:hover,
+.topnav a.topnav-menu:hover {
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
+}
+
+/* Add a grey background color on mouse-over */
+.topnav a:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+/* Style the active link (or home/logo) */
+.active {
+    background-color: rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+.footernavbar {
+    overflow: hidden;
+    background-color: #4CAF50;
+    position: fixed;
+    bottom: 0;
+    left:0;
+    width: 100%;
+    text-align:center;
+    padding:5px;
+}
+.footernavbar button {
+    color: #f2f2f2;
+    text-align: center;
+    background-color: red;
+     border: none;
+        outline: 0;
+        padding: 10px;
+        cursor: pointer;
+        width: 150px;
+        font-size: 16px;
+        font-weight: bold;
+        border-radius: 20px;
+}
+.footernavbar #btnContinue{
+    width: 180px;
+}
+
+.footernavbar button:hover {
+    background-color: gray;
+}
+.card {
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+        max-width: 800px;
+        margin: auto;
+        text-align: center;
+        font-family: arial;
+}
+
+.price {
+        color: grey;
+        font-size: 22px;
+}
+
+.card .button {
+        border: none;
+        outline: 0;
+        padding: 12px;
+        color: white;
+        background-color: #000;
+        text-align: center;
+        cursor: pointer;
+        width: 100%;
+        font-size: 18px;
+}
+
+.card .button:hover {
+        opacity: 0.7;
+}
+
+#mySidenav{
+    position: fixed;
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1100;
+    cursor: pointer;
+    pointer-events: none;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+#mySidenav.is-open {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.sidenav {
+    height: 100%;
+    width: 260px;
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    right: 0;
+    left: auto;
+    background: linear-gradient(180deg, #1a472a 0%, #2d6a4f 100%);
+    overflow-x: hidden;
+    padding-top: 60px;
+    text-align: right;
+    box-shadow: -4px 0 24px rgba(15, 23, 42, 0.2);
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    cursor: default;
+}
+
+#mySidenav.is-open .sidenav {
+    transform: translateX(0);
+}
+
+.sidenav a {
+    padding: 12px 24px;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.88);
+    display: block;
+    text-align: right;
+    transition: background 0.15s, color 0.15s;
+}
+
+.sidenav a:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.sidenav .closebtn {
+    position: absolute;
+    top: 8px;
+    right: 18px;
+    left: auto;
+    font-size: 32px;
+    margin-left: 0;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+    width: 36px;
+    height: 36px;
+    line-height: 36px;
+    text-align: center;
+    border-radius: 8px;
+    padding: 0;
+}
+
+@media screen and (max-height: 250px) {
+    .sidenav {padding-top: 15px;}
+    .sidenav a {font-size: 18px;}
+}
+#menudate{
+    text-align: center;
+    margin: 5px;
+}
+#menudate input[type=date] {
+    padding:10px;
+}
+/* Full-width input fields */
+#msg_display{
+ display: none;
+ position: fixed;
+ z-index: 10;
+ top:0;
+
+
+ width:400px;
+}
+
+
+
+/* Center the loader */
+#overlay {
+    position: fixed;
+    display: none;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 2;
+    cursor: pointer;
+}
+
+#loader {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    width: 150px;
+    height: 150px;
+    margin: -75px 0 0 -75px;
+    border: 16px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 16px solid #3498db;
+    width: 100px;
+    height: 100px;
+    -webkit-animation: spin 2s linear infinite;
+    animation: spin 2s linear infinite;
+}
+
+@-webkit-keyframes spin {
+    0% { -webkit-transform: rotate(0deg); }
+    100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Add animation to "page content" */
+.animate-bottom {
+    position: relative;
+    -webkit-animation-name: animatebottom;
+    -webkit-animation-duration: 1s;
+    animation-name: animatebottom;
+    animation-duration: 1s
+}
+
+@-webkit-keyframes animatebottom {
+    from { bottom:-100px; opacity:0 }
+    to { bottom:0px; opacity:1 }
+}
+
+@keyframes animatebottom {
+    from{ bottom:-100px; opacity:0 }
+    to{ bottom:0; opacity:1 }
+}
+
+#msgbox{
+    display: none;
+    position: fixed;
+    font-size: 18px;
+    top:0px;
+    right: 50px;
+    left: 50px;
+    margin:0px;
+    padding: 10px;
+    background-color: red;
+    color: white;
+    border-radius: 5px;
+    text-align:center;
+    z-index:1;
+}
+#welcomemsg {
+    position: static;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 12px;
+    text-align: right;
+    min-width: 0;
+    padding-right: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+}
+
+@media screen and (max-width: 640px) {
+    #welcomemsg {
+        display: none;
+    }
+
+    #titlepage {
+        font-size: 13px;
+    }
+}
+
+@media screen and (max-width: 520px) {
+    .topnav a.topnav-action {
+        width: 38px;
+        height: 38px;
+    }
+
+    .topnav-action-icon {
+        width: 20px;
+        height: 20px;
+    }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "pickleball-realtime",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Socket.io bridge for live court slots and chat",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5",
+    "cors": "^2.8.5"
+  }
+}

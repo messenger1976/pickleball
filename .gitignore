@@ -1,0 +1,36 @@
+# Dependencies
+realtime/node_modules/
+node_modules/
+vendor/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+admin/payment_config.local.php
+*.pem
+*.key
+
+# OS / editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs & caches
+*.log
+npm-debug.log*
+.cache/
+tmp/
+temp/
+
+# Local uploads / runtime
+uploads/tmp/
+admin/uploads/tmp/
+
+# XAMPP / local noise
+*.bak
+*.old

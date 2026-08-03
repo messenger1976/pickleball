@@ -1,0 +1,559 @@
+/* Pickleball Portal — brand theme (contrast-first) */
+:root {
+  --pb-ink: #0c1f17;
+  --pb-court: #0f3d2e;
+  --pb-court-mid: #1a5c44;
+  --pb-leaf: #1f7a52;
+  --pb-ball: #e4f34a;
+  --pb-ball-deep: #c5d62e;
+  --pb-sand: #f3f6f1;
+  --pb-line: #d7e0d9;
+  --pb-muted: #3f5248;
+  --pb-muted-soft: #5a6e63;
+  --pb-white: #ffffff;
+  --pb-surface: #ffffff;
+  --pb-surface-alt: #eef3ef;
+  --pb-danger: #b42318;
+  --pb-shadow: 0 14px 36px rgba(12, 31, 23, 0.1);
+  --pb-radius: 8px;
+  --pb-radius-sm: 6px;
+  --pb-font-display: "Archivo Black", "Arial Black", sans-serif;
+  --pb-font-body: "Manrope", "Segoe UI", sans-serif;
+  --pb-focus: 0 0 0 3px rgba(31, 122, 82, 0.28);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--pb-font-body) !important;
+  color: var(--pb-ink);
+  line-height: 1.55;
+  background:
+    radial-gradient(1100px 480px at 8% -8%, rgba(228, 243, 74, 0.14), transparent 55%),
+    linear-gradient(180deg, #f8fbf7 0%, #eef4ef 42%, #f8fbf7 100%);
+  -webkit-font-smoothing: antialiased;
+}
+
+body * {
+  font-family: inherit;
+}
+
+a {
+  color: var(--pb-court-mid);
+}
+
+a:hover {
+  color: var(--pb-leaf);
+}
+
+:focus-visible {
+  outline: 2px solid var(--pb-leaf);
+  outline-offset: 2px;
+}
+
+/* —— Top nav —— */
+.topnav {
+  background: linear-gradient(105deg, #0a2a20 0%, #124c38 48%, #165a42 100%) !important;
+  border-bottom: 3px solid var(--pb-ball);
+}
+
+#titlepage {
+  font-family: var(--pb-font-display) !important;
+  letter-spacing: 0.08em !important;
+  font-size: 14px !important;
+  text-transform: uppercase;
+  color: #fff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.topnav a {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.topnav a.topnav-action {
+  border-radius: 8px !important;
+}
+
+.topnav a.topnav-action:hover,
+.topnav a:hover {
+  background: rgba(228, 243, 74, 0.16) !important;
+  color: #fff !important;
+}
+
+.sidenav {
+  background: var(--pb-court) !important;
+}
+
+.sidenav a {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.sidenav a:hover {
+  background: rgba(228, 243, 74, 0.14) !important;
+  color: #fff !important;
+}
+
+/* —— Home shell —— */
+.portal-home {
+  background: transparent !important;
+  color: var(--pb-ink) !important;
+}
+
+.portal-hero {
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
+  background: var(--pb-court) !important;
+  color: #fff !important;
+}
+
+.portal-hero-overlay {
+  background:
+    linear-gradient(105deg, rgba(8, 30, 22, 0.94) 0%, rgba(8, 30, 22, 0.78) 46%, rgba(8, 30, 22, 0.58) 100%),
+    linear-gradient(180deg, rgba(8, 30, 22, 0.4) 0%, rgba(8, 30, 22, 0.82) 100%) !important;
+}
+
+.portal-hero-inner {
+  max-width: 760px !important;
+  animation: pbRise 0.9s ease-out both;
+}
+
+.portal-hero-badge {
+  display: inline-block !important;
+  background: rgba(228, 243, 74, 0.14) !important;
+  border: 0 !important;
+  border-left: 3px solid var(--pb-ball) !important;
+  border-radius: 0 !important;
+  color: #f4ff8a !important;
+  padding: 4px 0 4px 12px !important;
+  font-family: var(--pb-font-body) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  font-size: 12px !important;
+  margin-bottom: 18px !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.portal-hero h1 {
+  font-family: var(--pb-font-display) !important;
+  font-size: clamp(2.4rem, 6.5vw, 4.4rem) !important;
+  line-height: 0.96 !important;
+  letter-spacing: -0.02em !important;
+  text-transform: uppercase !important;
+  margin: 0 0 16px !important;
+  color: #fff !important;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+}
+
+.portal-hero .lead {
+  font-size: 1.1rem !important;
+  line-height: 1.6 !important;
+  color: rgba(255, 255, 255, 0.94) !important;
+  max-width: 40ch !important;
+  margin-bottom: 28px !important;
+  opacity: 1 !important;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.28);
+}
+
+/* Search: solid field for readability */
+.portal-search-wrap {
+  background: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.65) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22) !important;
+  backdrop-filter: none !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+}
+
+.portal-search-wrap input {
+  background: #fff !important;
+  color: var(--pb-ink) !important;
+  font-weight: 600 !important;
+}
+
+.portal-search-wrap input::placeholder {
+  color: var(--pb-muted-soft) !important;
+  opacity: 1 !important;
+}
+
+.portal-search-wrap button,
+.portal-btn-primary,
+.store-btn-primary,
+.admin-courts-btn,
+.bk-btn,
+.avail-btn {
+  background: var(--pb-ball) !important;
+  color: var(--pb-ink) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-weight: 800 !important;
+}
+
+.portal-search-wrap button:hover,
+.portal-btn-primary:hover,
+.store-btn-primary:hover {
+  background: var(--pb-ball-deep) !important;
+  color: var(--pb-ink) !important;
+}
+
+/* Outline buttons: dark by default (light pages); light only on dark heroes */
+.portal-btn-outline,
+.store-btn-outline {
+  border: 1.5px solid var(--pb-court) !important;
+  color: var(--pb-court) !important;
+  background: rgba(255, 255, 255, 0.75) !important;
+  border-radius: 8px !important;
+  font-weight: 800 !important;
+}
+
+.portal-btn-outline:hover,
+.store-btn-outline:hover {
+  background: var(--pb-court) !important;
+  color: #fff !important;
+}
+
+.portal-hero .portal-btn-outline,
+.store-hero .portal-btn-outline,
+.portal-partner .portal-btn-outline {
+  border-color: rgba(255, 255, 255, 0.92) !important;
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.portal-hero .portal-btn-outline:hover,
+.store-hero .portal-btn-outline:hover,
+.portal-partner .portal-btn-outline:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+  color: #fff !important;
+}
+
+.portal-hero .portal-btn-primary {
+  background: var(--pb-ball) !important;
+  color: var(--pb-ink) !important;
+}
+
+.portal-hero-actions {
+  gap: 12px !important;
+}
+
+/* Stats strip */
+.portal-stats {
+  background: var(--pb-ink) !important;
+  color: #fff !important;
+  border-top: 3px solid var(--pb-ball);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.portal-stat {
+  background: transparent !important;
+}
+
+.portal-stat strong {
+  color: var(--pb-ball) !important;
+  font-family: var(--pb-font-display) !important;
+  font-size: 2rem !important;
+  text-shadow: none;
+}
+
+.portal-stat span {
+  color: rgba(255, 255, 255, 0.88) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+}
+
+/* Sections & type */
+.portal-section-header h2,
+.store-about h2,
+.store-section > h2 {
+  font-family: var(--pb-font-display) !important;
+  text-transform: uppercase !important;
+  letter-spacing: -0.01em !important;
+  color: var(--pb-court) !important;
+}
+
+.portal-section-header p,
+.portal-empty,
+.portal-step p {
+  color: var(--pb-muted) !important;
+}
+
+.portal-restaurant-card,
+.portal-food-card,
+.store-info-card {
+  border-radius: var(--pb-radius) !important;
+  box-shadow: var(--pb-shadow) !important;
+  border: 1px solid var(--pb-line) !important;
+  background: var(--pb-surface) !important;
+  overflow: hidden;
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.portal-restaurant-card:hover,
+.portal-food-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--pb-leaf) !important;
+  box-shadow: 0 18px 40px rgba(12, 31, 23, 0.14) !important;
+}
+
+.portal-restaurant-card h3,
+.portal-food-card h4 {
+  color: var(--pb-ink) !important;
+}
+
+.portal-restaurant-card .meta {
+  color: var(--pb-muted) !important;
+}
+
+.portal-food-card .from-store {
+  color: var(--pb-muted-soft) !important;
+  font-weight: 600 !important;
+}
+
+.portal-food-card .price {
+  color: var(--pb-court) !important;
+  font-weight: 800 !important;
+}
+
+.portal-restaurant-card .badge-open,
+.store-badge {
+  background: #eaf6c8 !important;
+  color: #1a3d18 !important;
+  border: 1px solid #c9df7a !important;
+  border-radius: 4px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+}
+
+.btn-order,
+.portal-food-card a,
+.portal-search-list a {
+  color: var(--pb-court) !important;
+  font-weight: 800 !important;
+}
+
+.portal-restaurant-card .btn-order {
+  background: var(--pb-court) !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+}
+
+.portal-restaurant-card .btn-order:hover {
+  background: var(--pb-court-mid) !important;
+  color: #fff !important;
+}
+
+.portal-section-alt {
+  background: var(--pb-surface-alt) !important;
+}
+
+/* News banner on light pages */
+.portal-hero-news {
+  background: #fff !important;
+  border: 1px solid var(--pb-line) !important;
+  border-left: 4px solid var(--pb-ball) !important;
+  border-radius: var(--pb-radius) !important;
+  box-shadow: var(--pb-shadow) !important;
+  color: var(--pb-ink) !important;
+  backdrop-filter: none !important;
+}
+
+.portal-hero-news-title {
+  color: var(--pb-court) !important;
+}
+
+.portal-hero-news-message {
+  color: var(--pb-muted) !important;
+}
+
+.portal-hero-news-link {
+  background: var(--pb-court) !important;
+  border-color: var(--pb-court) !important;
+  color: #fff !important;
+}
+
+/* Filters */
+.pb-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin: 0 0 28px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--pb-line);
+  border-radius: var(--pb-radius);
+  box-shadow: 0 4px 16px rgba(12, 31, 23, 0.04);
+}
+
+.pb-filter-bar label {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--pb-muted);
+  margin-bottom: 4px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pb-filter-bar select {
+  min-width: 140px;
+  padding: 10px 12px !important;
+  margin: 0 !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--pb-line) !important;
+  background: #fff !important;
+  color: var(--pb-ink) !important;
+  font-weight: 600;
+}
+
+.pb-filter-bar select:focus {
+  border-color: var(--pb-leaf) !important;
+  box-shadow: var(--pb-focus);
+  outline: none;
+}
+
+/* Search results */
+.portal-search-results {
+  background: #fff8db !important;
+  border: 1px solid #e2c76a !important;
+  color: #5c4813 !important;
+}
+
+.portal-search-results h3 {
+  color: #5c4813 !important;
+}
+
+#homeVenueMap,
+#venueMap {
+  border: 1px solid var(--pb-line);
+  box-shadow: var(--pb-shadow);
+  border-radius: 12px;
+}
+
+.pb-slot-btn {
+  border-radius: 8px !important;
+  border-color: var(--pb-line) !important;
+  color: var(--pb-ink) !important;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease !important;
+}
+
+.pb-slot-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--pb-court) !important;
+  background: #f4fbe8 !important;
+}
+
+.store-page {
+  background:
+    radial-gradient(900px 400px at 90% 0%, rgba(228, 243, 74, 0.1), transparent 50%),
+    #f7faf6 !important;
+  color: var(--pb-ink);
+}
+
+.store-hero {
+  min-height: min(78vh, 640px) !important;
+  position: relative;
+  color: #fff !important;
+}
+
+.store-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, rgba(8, 30, 22, 0.88) 0%, rgba(8, 30, 22, 0.55) 55%, rgba(8, 30, 22, 0.35) 100%);
+  pointer-events: none;
+}
+
+.store-hero-inner {
+  position: relative;
+  z-index: 1;
+  text-align: left !important;
+  margin-right: auto;
+  animation: pbRise 0.85s ease-out both;
+}
+
+.store-hero h1 {
+  font-family: var(--pb-font-display) !important;
+  text-transform: uppercase !important;
+  letter-spacing: -0.02em !important;
+  color: #fff !important;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+}
+
+.store-hero p,
+.store-hero .lead {
+  color: rgba(255, 255, 255, 0.94) !important;
+}
+
+.store-tag {
+  background: #eaf6c8 !important;
+  color: #1a3d18 !important;
+  border-radius: 4px !important;
+  font-weight: 700 !important;
+}
+
+.footernavbar {
+  background: var(--pb-court) !important;
+  border-top: 3px solid var(--pb-ball);
+  color: #fff !important;
+}
+
+.footernavbar.is-empty {
+  display: none !important;
+}
+
+.footernavbar button {
+  background: var(--pb-ball) !important;
+  color: var(--pb-ink) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-weight: 800 !important;
+}
+
+.portal-footer-note {
+  color: var(--pb-muted-soft) !important;
+}
+
+.portal-hero-slide.is-active .portal-hero-media-img {
+  animation: pbKen 12s ease-out both;
+}
+
+.portal-hero-dots {
+  background: rgba(8, 30, 22, 0.55) !important;
+}
+
+.portal-hero-dot {
+  background: rgba(255, 255, 255, 0.55) !important;
+}
+
+.portal-hero-dot.is-active {
+  background: var(--pb-ball) !important;
+}
+
+@keyframes pbRise {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pbKen {
+  from { transform: scale(1.08); }
+  to { transform: scale(1); }
+}
+
+@media (max-width: 700px) {
+  .portal-hero h1 {
+    max-width: none;
+  }
+  .store-hero-inner {
+    text-align: center !important;
+  }
+  .pb-filter-bar {
+    padding: 14px;
+  }
+  .pb-filter-bar select {
+    width: 100%;
+    min-width: 0;
+  }
+}
