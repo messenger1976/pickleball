@@ -1,0 +1,36 @@
+on:
+  push:
+    branches:
+      - main
+name: 🚀 Deploy pickleball website on push
+jobs:
+  web-deploy:
+    name: 🎉 Deploy pickleball website Server
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+    - name: 🚚 Get latest code
+      uses: actions/checkout@v2
+    
+    - name: 📂 Sync files
+      uses: SamKirkland/FTP-Deploy-Action@4.3.0
+      with:
+        server: pickelball.bohollander.com
+        username: ${{ secrets.ftp_username }}
+        password: ${{ secrets.ftp_password }}
+        server-dir: /
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/.buildpath/**
+          **/.vscode/**
+          **/app/cache/**
+          **/app/logs/**
+          **/app/config/config.php
+          **/app/config/database.php
+          *.sql
+          *.pdf
+          .ftp-deploy-sync-state.json
+          .git-ftp.log
+          .htaccess
+          .project
