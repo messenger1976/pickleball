@@ -28,6 +28,7 @@ jobs:
           **/app/logs/**
           **/app/config/config.php
           **/app/config/database.php
+          **/admin/db_config.php
           *.sql
           *.pdf
           .ftp-deploy-sync-state.json
