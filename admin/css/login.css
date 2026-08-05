@@ -80,16 +80,18 @@ body.login-page {
     inset: 0;
     z-index: 2;
     background:
-        linear-gradient(105deg, rgba(11, 47, 36, 0.92) 0%, rgba(11, 47, 36, 0.55) 55%, rgba(11, 47, 36, 0.28) 100%),
-        linear-gradient(180deg, transparent 10%, rgba(11, 47, 36, 0.78) 100%);
+        linear-gradient(105deg, rgba(8, 36, 28, 0.94) 0%, rgba(8, 36, 28, 0.72) 50%, rgba(8, 36, 28, 0.42) 100%),
+        linear-gradient(180deg, transparent 8%, rgba(8, 36, 28, 0.88) 100%);
     pointer-events: none;
 }
 
 .login-brand-inner {
     position: relative;
-    z-index: 1;
+    z-index: 3;
     max-width: 440px;
     animation: loginFadeUp 0.85s ease-out both;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 4px 18px rgba(0, 0, 0, 0.35);
 }
 
 .login-logo {
@@ -104,11 +106,12 @@ body.login-page {
     border-radius: 0;
     padding: 0 0 0 12px;
     margin-bottom: 22px;
-    color: var(--pb-ball);
+    color: #f5ff7a;
     background: transparent;
     border-top: 0;
     border-right: 0;
     border-bottom: 0;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .login-logo-icon {
@@ -137,14 +140,16 @@ body.login-page {
     text-transform: uppercase;
     margin: 0 0 16px;
     max-width: 12ch;
+    color: #ffffff;
 }
 
 .login-brand p {
     font-size: 1.05rem;
     line-height: 1.55;
-    color: rgba(255, 255, 255, 0.88);
+    color: #ffffff;
     margin: 0 0 28px;
     max-width: 38ch;
+    opacity: 1;
 }
 
 .login-features {
@@ -159,7 +164,8 @@ body.login-page {
     gap: 12px;
     margin-bottom: 14px;
     font-size: 0.95rem;
-    color: rgba(255, 255, 255, 0.9);
+    color: #ffffff;
+    font-weight: 600;
 }
 
 .login-features li span.icon {

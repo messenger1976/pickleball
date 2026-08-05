@@ -3,6 +3,7 @@ include('config.php');
 fh_auth_require_super_admin();
 
 include_once(__DIR__ . '/../includes/geo_helper.php');
+include_once(__DIR__ . '/../includes/portal_subscription_helper.php');
 fh_geo_ensure_seeded($conn);
 $geoCountries = fh_geo_get_countries($conn);
 $defaultCountry = 'Philippines';
@@ -30,37 +31,32 @@ $geoBarangays = $selectedTownId > 0 ? fh_geo_get_barangays($conn, $selectedTownI
 $hasBarangayList = count($geoBarangays) > 0;
 
 $searchQ = isset($_GET['q']) ? trim($_GET['q']) : '';
-$filterStatus = isset($_GET['status']) && in_array($_GET['status'], array('all', 'active', 'pending'), true)
+$filterStatus = isset($_GET['status']) && in_array($_GET['status'], array('all', 'active', 'trial', 'expired', 'inactive'), true)
     ? $_GET['status']
     : 'all';
 
-$baseWhere = 'WHERE business_id > 1';
+$baseWhere = 'WHERE ba.business_id > 1';
 if ($searchQ !== '') {
     $safe = $conn->real_escape_string($searchQ);
     $like = "'%" . $safe . "%'";
     $baseWhere .= " AND (
-        business_name LIKE $like OR
-        business_email LIKE $like OR
-        business_cont_person LIKE $like OR
-        business_contact LIKE $like OR
-        business_address LIKE $like OR
-        business_city LIKE $like OR
-        business_subdomain LIKE $like
+        ba.business_name LIKE $like OR
+        ba.business_email LIKE $like OR
+        ba.business_cont_person LIKE $like OR
+        ba.business_contact LIKE $like OR
+        ba.business_address LIKE $like OR
+        ba.business_city LIKE $like OR
+        ba.business_subdomain LIKE $like
     )";
-}
-if ($filterStatus === 'active') {
-    $baseWhere .= ' AND business_status=1';
-} elseif ($filterStatus === 'pending') {
-    $baseWhere .= ' AND business_status=0';
 }
 
 $allowedSort = array(
-    'id' => 'business_id',
-    'name' => 'business_name',
-    'email' => 'business_email',
-    'contact' => 'business_cont_person',
-    'signup' => 'business_signup_date',
-    'status' => 'business_status',
+    'id' => 'ba.business_id',
+    'name' => 'ba.business_name',
+    'email' => 'ba.business_email',
+    'contact' => 'ba.business_cont_person',
+    'signup' => 'ba.business_signup_date',
+    'status' => 'ba.business_status',
 );
 $sortKey = isset($_GET['sort']) && isset($allowedSort[$_GET['sort']]) ? $_GET['sort'] : 'status';
 $sortCol = $allowedSort[$sortKey];
@@ -76,8 +72,71 @@ if (!in_array($perPage, $allowedPerPage, true)) {
     $perPage = 25;
 }
 
-$countResult = $conn->query("SELECT COUNT(*) AS c FROM business_account $baseWhere");
-$totalBusinesses = ($countResult && ($countRow = $countResult->fetch_assoc())) ? (int)$countRow['c'] : 0;
+$businesses = array();
+$allBusinesses = array();
+$summaryCounts = array(
+    'active' => 0,
+    'trial' => 0,
+    'expired' => 0,
+    'inactive' => 0,
+);
+$allSql = $conn->query(
+    "SELECT ba.*, bs.subscription_id, bs.signup_intent, bs.status AS subscription_status,
+            bs.trial_ends_at, bs.current_period_end
+     FROM business_account ba
+     LEFT JOIN (
+         SELECT bs1.*
+         FROM business_subscriptions bs1
+         INNER JOIN (
+             SELECT business_id, MAX(subscription_id) AS max_subscription_id
+             FROM business_subscriptions
+             GROUP BY business_id
+         ) latest
+             ON latest.max_subscription_id = bs1.subscription_id
+     ) bs ON bs.business_id = ba.business_id
+     $baseWhere
+     ORDER BY $sortCol $sortDir, ba.business_name ASC"
+);
+if ($allSql) {
+    while ($row = $allSql->fetch_assoc()) {
+        $row['portal_status_key'] = 'inactive';
+        $row['portal_status_label'] = ((int)$row['business_status'] === 1) ? 'Active' : 'Inactive';
+        $row['portal_status_class'] = ((int)$row['business_status'] === 1) ? 'is-success' : 'is-neutral';
+
+        $subState = fh_portal_sub_access_state($conn, (int)$row['business_id']);
+        if ((int)$row['business_status'] !== 1) {
+            $row['portal_status_key'] = 'inactive';
+            $row['portal_status_label'] = 'Inactive';
+            $row['portal_status_class'] = 'is-neutral';
+        } elseif ($subState['state'] === 'trialing') {
+            $row['portal_status_key'] = 'trial';
+            $row['portal_status_label'] = 'Trial Account';
+            $row['portal_status_class'] = 'is-warning';
+        } elseif ($subState['state'] === 'expired') {
+            $row['portal_status_key'] = 'expired';
+            $row['portal_status_label'] = 'Expired Trial';
+            $row['portal_status_class'] = 'is-danger';
+        } else {
+            $row['portal_status_key'] = 'active';
+            $row['portal_status_label'] = 'Active';
+            $row['portal_status_class'] = 'is-success';
+        }
+
+        if (isset($summaryCounts[$row['portal_status_key']])) {
+            $summaryCounts[$row['portal_status_key']]++;
+        }
+        $allBusinesses[] = $row;
+    }
+}
+
+foreach ($allBusinesses as $row) {
+    if ($filterStatus !== 'all' && $row['portal_status_key'] !== $filterStatus) {
+        continue;
+    }
+    $businesses[] = $row;
+}
+
+$totalBusinesses = count($businesses);
 $totalPages = $totalBusinesses > 0 ? (int)ceil($totalBusinesses / $perPage) : 1;
 if ($page > $totalPages) {
     $page = $totalPages;
@@ -85,22 +144,17 @@ if ($page > $totalPages) {
 $offset = ($page - 1) * $perPage;
 $showingFrom = $totalBusinesses > 0 ? $offset + 1 : 0;
 $showingTo = min($offset + $perPage, $totalBusinesses);
+$businesses = array_slice($businesses, $offset, $perPage);
 
-$pendingCount = fh_count_pending_businesses($conn);
-$activeResult = $conn->query('SELECT COUNT(*) AS c FROM business_account WHERE business_id > 1 AND business_status=1');
-$activeCount = ($activeResult && ($arow = $activeResult->fetch_assoc())) ? (int)$arow['c'] : 0;
+$pendingCount = $summaryCounts['inactive'];
+$activeCount = $summaryCounts['active'];
+$trialCount = $summaryCounts['trial'];
+$expiredCount = $summaryCounts['expired'];
 
-$businesses = array();
-$itemsSql = $conn->query(
-    "SELECT * FROM business_account
-     $baseWhere
-     ORDER BY $sortCol $sortDir, business_name ASC
-     LIMIT $offset, $perPage"
-);
-if ($itemsSql) {
-    while ($row = $itemsSql->fetch_assoc()) {
-        $businesses[] = $row;
-    }
+if ($filterStatus === 'all') {
+    $filteredLabel = '';
+} else {
+    $filteredLabel = ' (' . ucfirst($filterStatus) . ')';
 }
 
 function admin_business_list_url($overrides = array()) {
@@ -150,7 +204,7 @@ include('header.php');
 include('navigation.php');
 ?>
 
-<link rel="stylesheet" href="../css/portal-order.css?v=20260714b" type="text/css" />
+<link rel="stylesheet" href="../css/portal-order.css?v=20260804e" type="text/css" />
 <style>
 .admin-orders-filter {
     display: flex;
@@ -219,6 +273,9 @@ include('navigation.php');
     color: #2d6a4f;
     font-weight: 700;
 }
+.portal-orders-summary {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
 .portal-order-modal-dialog-business {
     width: min(760px, calc(100% - 32px));
 }
@@ -255,6 +312,20 @@ include('navigation.php');
     font-size: 13px;
     font-weight: 600;
     color: #475569;
+}
+.admin-business-readonly {
+    width: 100%;
+    padding: 11px 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box;
+    margin: 0 0 14px;
+    background: #f8fafc;
+    color: #475569;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
 }
 .portal-order-modal-section .admin-business-hint {
     margin: -8px 0 14px;
@@ -304,6 +375,9 @@ include('navigation.php');
 }
 #errmsg { display: none; }
 @media (max-width: 640px) {
+    .portal-orders-summary {
+        grid-template-columns: 1fr 1fr;
+    }
     .portal-order-modal-section .admin-business-row,
     .portal-order-modal-section .admin-business-address-grid {
         grid-template-columns: 1fr;
@@ -317,6 +391,12 @@ include('navigation.php');
         <h1>Business Account Listing</h1>
         <p>Review partner applications, activate restaurants, and manage business details.</p>
     </div>
+
+    <?php if (isset($_GET['error']) && $_GET['error'] === 'enter'): ?>
+    <p class="admin-business-tip" style="background:#fef2f2;border-color:#fecaca;color:#991b1b;">
+        Unable to open that business dashboard. The account may no longer exist.
+    </p>
+    <?php endif; ?>
 
     <?php if ($pendingCount > 0): ?>
     <p class="admin-business-tip">
@@ -339,7 +419,9 @@ include('navigation.php');
             <select id="filterStatus" name="status">
                 <option value="all"<?php echo $filterStatus === 'all' ? ' selected' : ''; ?>>All businesses</option>
                 <option value="active"<?php echo $filterStatus === 'active' ? ' selected' : ''; ?>>Active</option>
-                <option value="pending"<?php echo $filterStatus === 'pending' ? ' selected' : ''; ?>>Pending</option>
+                <option value="trial"<?php echo $filterStatus === 'trial' ? ' selected' : ''; ?>>Trial Account</option>
+                <option value="expired"<?php echo $filterStatus === 'expired' ? ' selected' : ''; ?>>Expired Trial</option>
+                <option value="inactive"<?php echo $filterStatus === 'inactive' ? ' selected' : ''; ?>>Inactive</option>
             </select>
         </div>
         <div>
@@ -356,15 +438,23 @@ include('navigation.php');
     <div class="portal-orders-summary">
         <div class="portal-orders-summary-card">
             <strong><?php echo number_format($totalBusinesses); ?></strong>
-            <span>Showing<?php echo ($searchQ !== '' || $filterStatus !== 'all') ? ' (filtered)' : ''; ?></span>
+            <span>Showing<?php echo ($searchQ !== '' || $filterStatus !== 'all') ? $filteredLabel : ''; ?></span>
         </div>
         <div class="portal-orders-summary-card">
             <strong><?php echo number_format($activeCount); ?></strong>
             <span>Active</span>
         </div>
         <div class="portal-orders-summary-card">
+            <strong><?php echo number_format($trialCount); ?></strong>
+            <span>Trial Account</span>
+        </div>
+        <div class="portal-orders-summary-card">
+            <strong><?php echo number_format($expiredCount); ?></strong>
+            <span>Expired Trial</span>
+        </div>
+        <div class="portal-orders-summary-card">
             <strong><?php echo number_format($pendingCount); ?></strong>
-            <span>Pending</span>
+            <span>Inactive</span>
         </div>
     </div>
 
@@ -449,7 +539,6 @@ include('navigation.php');
                     <tbody>
                         <?php foreach ($businesses as $row):
                             $bizId = (int)$row['business_id'];
-                            $isActive = (int)$row['business_status'] === 1;
                             $fullAddress = implode(', ', array_filter(array(
                                 $row['business_address'],
                                 !empty($row['business_barangay']) ? 'Brgy. ' . $row['business_barangay'] : '',
@@ -473,14 +562,13 @@ include('navigation.php');
                             <td><?php echo htmlspecialchars($row['business_contact'] ?: '—'); ?></td>
                             <td><?php echo !empty($row['business_signup_date']) ? date('M j, Y g:i A', strtotime($row['business_signup_date'])) : '—'; ?></td>
                             <td>
-                                <?php if ($isActive): ?>
-                                    <span class="portal-orders-status is-success">Active</span>
-                                <?php else: ?>
-                                    <span class="portal-orders-status is-warning">Pending</span>
-                                <?php endif; ?>
+                                <span class="portal-orders-status <?php echo htmlspecialchars($row['portal_status_class']); ?>">
+                                    <?php echo htmlspecialchars($row['portal_status_label']); ?>
+                                </span>
                             </td>
                             <td class="portal-orders-col-action">
                                 <div class="portal-orders-actions">
+                                    <a class="portal-orders-action-btn" href="enter_business.php?business_id=<?php echo $bizId; ?>" title="Open venue dashboard" aria-label="Login to business dashboard #<?php echo $bizId; ?>"><i class="fa fa-sign-in" aria-hidden="true"></i></a>
                                     <button type="button" class="portal-orders-action-btn btn-business-edit" data-businessid="<?php echo $bizId; ?>" title="Edit business" aria-label="Edit business #<?php echo $bizId; ?>">✎</button>
                                 </div>
                             </td>
@@ -567,11 +655,23 @@ include('navigation.php');
                         </select>
                     </div>
                     <div>
-                        <label for="status">Status</label>
+                        <label for="status">Business Status</label>
                         <select id="status">
                             <option value="1">Active</option>
-                            <option value="0">Pending / Inactive</option>
+                            <option value="0">Inactive</option>
                         </select>
+                        <p class="admin-business-hint">This controls whether the business account itself is enabled.</p>
+                    </div>
+                </div>
+
+                <div class="admin-business-row">
+                    <div>
+                        <label for="subscription_status_view">Subscription Status</label>
+                        <div id="subscription_status_view" class="admin-business-readonly">No subscription on file</div>
+                    </div>
+                    <div>
+                        <label>&nbsp;</label>
+                        <p class="admin-business-hint" style="margin-top:10px;">Trial and expired states are managed automatically from the partner subscription record.</p>
                     </div>
                 </div>
 
@@ -854,6 +954,7 @@ include('navigation.php');
         $('#business_id').val(0);
         $('#business_name, #subdomain, #address, #contactperson, #contactnumber, #email, #receipt_prefix, #receipt_next').val('');
         $('#status').val('1');
+        $('#subscription_status_view').text('No subscription on file');
         $('#business_category').val('Restaurant');
         $('#businessFormMsg').hide().text('');
         $('#businessModalTitle').text('Add Business');
@@ -887,6 +988,7 @@ include('navigation.php');
             $('#contactnumber').val(d.business_contact || '');
             $('#email').val(d.business_email || '');
             $('#status').val(String(parseInt(d.business_status, 10) === 1 ? 1 : 0));
+            $('#subscription_status_view').text(d.portal_status_label || 'No subscription on file');
             fillAddressFromBusiness(d);
             openModal($modal);
         }, 'json').fail(function () {

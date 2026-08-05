@@ -201,15 +201,20 @@ body.admin-app {
 }
 
 .admin-sidebar-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: rgba(255, 255, 255, 0.15);
     border: none;
     color: #fff;
     width: 32px;
     height: 32px;
+    padding: 0;
     border-radius: 8px;
     cursor: pointer;
     font-size: 18px;
     line-height: 1;
+    box-sizing: border-box;
 }
 
 .admin-sidebar-close:hover {
@@ -388,6 +393,73 @@ header.w3-bar.w3-theme {
     display: none !important;
 }
 
+.admin-managing-banner {
+    position: fixed;
+    top: var(--admin-header-h);
+    left: 0;
+    right: 0;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 8px 20px;
+    border: 0;
+    border-bottom: 1px solid #86efac;
+    border-radius: 0;
+    background: #ecfdf5;
+    color: #14532d;
+    font-size: 0.88rem;
+}
+
+body.admin-app.is-managing-venue {
+    --admin-managing-bar-h: 44px;
+}
+
+body.admin-app.is-managing-venue .admin-page-body,
+body.admin-app.is-managing-venue .dash-wrap,
+body.admin-app.is-managing-venue > .w3-container,
+body.admin-app.is-managing-venue > .w3-container-padding,
+body.admin-app.is-managing-venue > #container {
+    padding-top: calc(var(--admin-header-h) + var(--admin-managing-bar-h) + 20px) !important;
+}
+
+.admin-managing-banner-text {
+    min-width: 0;
+}
+
+.admin-managing-banner-note {
+    color: #3f6212;
+    font-weight: 500;
+}
+
+.admin-managing-banner-note::before {
+    content: "·";
+    margin: 0 0.4em;
+    color: #86efac;
+}
+
+.admin-managing-banner-exit {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    border-radius: 8px;
+    border: 1px solid #166534;
+    background: #166534;
+    color: #fff !important;
+    text-decoration: none !important;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.admin-managing-banner-exit:hover {
+    background: #14532d;
+    border-color: #14532d;
+}
+
 @media (max-width: 768px) {
     .admin-topbar-brand {
         display: none;
@@ -403,5 +475,9 @@ header.w3-bar.w3-theme {
 
     .admin-topbar-link span.hide-mobile {
         display: none;
+    }
+
+    body.admin-app.is-managing-venue {
+        --admin-managing-bar-h: 72px;
     }
 }

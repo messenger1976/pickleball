@@ -506,6 +506,7 @@
             }
             break;
         case('LoadBusiness'):
+            include_once(__DIR__ . '/../includes/portal_subscription_helper.php');
             if (!fh_auth_is_super_admin()) {
                 $log['msg'] = false;
                 $log['error'] = 'Access denied.';
@@ -517,6 +518,21 @@
                 $log['msg'] = false;
                 $log['error'] = 'Business not found.';
                 break;
+            }
+            $subState = fh_portal_sub_access_state($conn, $businessId);
+            $row['portal_status_key'] = 'inactive';
+            $row['portal_status_label'] = ((int)$row['business_status'] === 1) ? 'Active' : 'Inactive';
+            if ((int)$row['business_status'] === 1) {
+                if ($subState['state'] === 'trialing') {
+                    $row['portal_status_key'] = 'trial';
+                    $row['portal_status_label'] = 'Trial Account';
+                } elseif ($subState['state'] === 'expired') {
+                    $row['portal_status_key'] = 'expired';
+                    $row['portal_status_label'] = 'Expired Trial';
+                } else {
+                    $row['portal_status_key'] = 'active';
+                    $row['portal_status_label'] = 'Active';
+                }
             }
             $log['msg'] = true;
             $log['data'] = $row;
@@ -532,6 +548,7 @@
             if($usercount>0){
                 $row = $usersql->fetch_assoc();
                 fh_auth_set_session($row);
+                fh_auth_exit_business();
                 $log['user_id']=$_SESSION['user_id'];
                 $log['msg']="index.php";
             }else{
@@ -877,6 +894,121 @@
             $result = fh_portal_news_delete($conn, isset($_POST['news_id']) ? $_POST['news_id'] : 0);
             $log['validation_status'] = $result['ok'] ? 'T' : 'F';
             $log['msg'] = $result['msg'];
+            break;
+        case('LoadPortalSubscription'):
+            include_once(__DIR__ . '/../includes/portal_subscription_helper.php');
+            if (!fh_auth_is_super_admin()) {
+                $log['validation_status'] = 'F';
+                $log['msg'] = 'Access denied.';
+                break;
+            }
+            $log['validation_status'] = 'T';
+            $log['data'] = fh_portal_sub_get_settings($conn);
+            $log['preview'] = fh_portal_sub_pricing_preview($conn);
+            break;
+        case('SavePortalSubscription'):
+            include_once(__DIR__ . '/../includes/portal_subscription_helper.php');
+            if (!fh_auth_is_super_admin()) {
+                $log['validation_status'] = 'F';
+                $log['msg'] = 'Access denied.';
+                break;
+            }
+            $result = fh_portal_sub_save_settings($conn, array(
+                'trial_enabled' => isset($_POST['trial_enabled']) ? $_POST['trial_enabled'] : 0,
+                'trial_days' => isset($_POST['trial_days']) ? $_POST['trial_days'] : 7,
+                'monthly_fee' => isset($_POST['monthly_fee']) ? $_POST['monthly_fee'] : 1500,
+                'yearly_discount_pct' => isset($_POST['yearly_discount_pct']) ? $_POST['yearly_discount_pct'] : 10,
+                'paymongo_fee_percent' => isset($_POST['paymongo_fee_percent']) ? $_POST['paymongo_fee_percent'] : 2.9,
+                'paymongo_fee_fixed' => isset($_POST['paymongo_fee_fixed']) ? $_POST['paymongo_fee_fixed'] : 15,
+                'signup_blurb' => isset($_POST['signup_blurb']) ? $_POST['signup_blurb'] : '',
+            ));
+            $log['validation_status'] = $result['ok'] ? 'T' : 'F';
+            $log['msg'] = $result['msg'];
+            if ($result['ok']) {
+                $log['data'] = fh_portal_sub_get_settings($conn);
+                $log['preview'] = fh_portal_sub_pricing_preview($conn);
+            }
+            break;
+        case('StartVenueSubscriptionCheckout'):
+            include_once(__DIR__ . '/../includes/portal_subscription_helper.php');
+            include_once(__DIR__ . '/../includes/payment_helper.php');
+            if (!fh_auth_is_logged_in()) {
+                $log['validation_status'] = 'F';
+                $log['msg'] = 'Please sign in.';
+                break;
+            }
+            $bizId = 0;
+            if (fh_auth_is_managing_business()) {
+                $bizId = fh_auth_managing_business_id();
+            } elseif (isset($_SESSION['user_role']) && $_SESSION['user_role'] === FH_ROLE_BUSINESS_ADMIN) {
+                $bizId = fh_auth_user_business_id();
+            }
+            if ($bizId <= 0 || (!fh_auth_is_super_admin() && (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== FH_ROLE_BUSINESS_ADMIN))) {
+                $log['validation_status'] = 'F';
+                $log['msg'] = 'Access denied.';
+                break;
+            }
+            if (!fh_auth_can_access_business($bizId)) {
+                $log['validation_status'] = 'F';
+                $log['msg'] = 'Access denied.';
+                break;
+            }
+            $cycle = (isset($_POST['billing_cycle']) && $_POST['billing_cycle'] === 'yearly') ? 'yearly' : 'monthly';
+            $months = isset($_POST['months']) ? (int)$_POST['months'] : 1;
+            $sub = fh_portal_sub_fetch_by_business($conn, $bizId);
+            if (!$sub) {
+                $ownerId = 0;
+                if (!fh_auth_is_super_admin()) {
+                    $ownerId = (int)$_SESSION['user_id'];
+                } else {
+                    $ownerSql = $conn->query(
+                        "SELECT user_id FROM user
+                         WHERE user_business_account=$bizId AND user_role='business_admin'
+                         ORDER BY user_id ASC LIMIT 1"
+                    );
+                    if ($ownerSql && ($orow = $ownerSql->fetch_assoc())) {
+                        $ownerId = (int)$orow['user_id'];
+                    }
+                }
+                $created = fh_portal_sub_create_pending($conn, array(
+                    'business_id' => $bizId,
+                    'owner_user_id' => $ownerId,
+                    'signup_intent' => 'subscribe',
+                    'billing_cycle' => $cycle,
+                    'months' => $months,
+                ));
+                if (!$created['ok']) {
+                    $log['validation_status'] = 'F';
+                    $log['msg'] = $created['msg'];
+                    break;
+                }
+                $sub = fh_portal_sub_fetch($conn, $created['subscription_id']);
+            }
+            $prep = fh_portal_sub_prepare_payment($conn, (int)$sub['subscription_id'], $cycle, $months);
+            if (!$prep['ok']) {
+                $log['validation_status'] = 'F';
+                $log['msg'] = $prep['msg'];
+                break;
+            }
+            $amounts = $prep['amounts'];
+            $successUrl = pb_app_base_url() . '/admin/subscription.php?paid=1&business_id=' . $bizId;
+            $cancelUrl = pb_app_base_url() . '/admin/subscription.php?paid=0&business_id=' . $bizId;
+            $checkout = pb_paymongo_create_checkout($conn, array(
+                'amount' => $amounts['total'],
+                'description' => 'Venue subscription — ' . ($cycle === 'yearly' ? 'yearly' : ($amounts['months'] . ' month(s)')),
+                'business_id' => $bizId,
+                'platform_subscription_id' => (int)$sub['subscription_id'],
+                'success_url' => $successUrl,
+                'cancel_url' => $cancelUrl,
+            ));
+            if (empty($checkout['ok'])) {
+                $log['validation_status'] = 'F';
+                $log['msg'] = isset($checkout['msg']) ? $checkout['msg'] : 'Unable to start checkout.';
+                break;
+            }
+            $log['validation_status'] = 'T';
+            $log['checkout_url'] = $checkout['checkout_url'];
+            $log['msg'] = 'Checkout ready.';
             break;
         case('GetCustomerDepartments'):
             if (!fh_auth_is_super_admin()) {

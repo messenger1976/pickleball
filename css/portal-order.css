@@ -2182,21 +2182,56 @@ aside.portal-cart-summary .portal-shipping-details-panel.portal-cart-panel {
 
 .portal-orders-actions {
     display: inline-flex;
-    gap: 6px;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
     justify-content: center;
+    gap: 6px;
+    vertical-align: middle;
 }
 
 .portal-orders-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 32px;
     width: 32px;
     height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    margin: 0;
+    padding: 0;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
     background: #fff;
     color: #2d6a4f;
     font-size: 14px;
+    font-family: inherit;
     line-height: 1;
+    text-decoration: none;
+    vertical-align: middle;
+    box-sizing: border-box;
     cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
     transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+.portal-orders-action-btn .fa {
+    display: block;
+    line-height: 1;
+    font-size: 14px;
+    width: 1em;
+    text-align: center;
+}
+
+a.portal-orders-action-btn {
+    color: #2d6a4f;
+}
+
+a.portal-orders-action-btn:hover {
+    color: #2d6a4f;
+    text-decoration: none;
 }
 
 .portal-orders-action-btn:hover:not(:disabled) {
@@ -2333,8 +2368,12 @@ body.portal-modal-open {
 }
 
 .portal-order-modal-header .portal-order-modal-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 36px;
     height: 36px;
+    padding: 0;
     border: none;
     border-radius: 8px;
     background: transparent;
@@ -2343,6 +2382,7 @@ body.portal-modal-open {
     line-height: 1;
     cursor: pointer;
     flex-shrink: 0;
+    box-sizing: border-box;
 }
 
 .portal-order-modal-header .portal-order-modal-close:hover {

@@ -5,6 +5,7 @@ include_once __DIR__ . '/realtime_helper.php';
 function pb_payment_create_row($conn, $data) {
     $bookingId = (int)(isset($data['booking_id']) ? $data['booking_id'] : 0);
     $membershipId = (int)(isset($data['membership_id']) ? $data['membership_id'] : 0);
+    $platformSubId = (int)(isset($data['platform_subscription_id']) ? $data['platform_subscription_id'] : 0);
     $customersId = (int)(isset($data['customers_id']) ? $data['customers_id'] : 0);
     $businessId = (int)(isset($data['business_id']) ? $data['business_id'] : 0);
     $amount = (float)$data['amount'];
@@ -14,8 +15,8 @@ function pb_payment_create_row($conn, $data) {
     $status = $conn->real_escape_string(isset($data['payment_status']) ? $data['payment_status'] : 'pending');
     $conn->query(
         "INSERT INTO payments
-         (booking_id, membership_id, customers_id, business_id, amount, provider, provider_txn_id, checkout_url, payment_status, created_at)
-         VALUES ($bookingId, $membershipId, $customersId, $businessId, $amount, '$provider', '$txn', '$url', '$status', NOW())"
+         (booking_id, membership_id, platform_subscription_id, customers_id, business_id, amount, provider, provider_txn_id, checkout_url, payment_status, created_at)
+         VALUES ($bookingId, $membershipId, $platformSubId, $customersId, $businessId, $amount, '$provider', '$txn', '$url', '$status', NOW())"
     );
     return (int)$conn->insert_id;
 }
@@ -66,6 +67,10 @@ function pb_payment_mark_paid($conn, $paymentId, $raw = '') {
              WHERE membership_id=$mid"
         );
     }
+    if ($pay && (int)$pay['platform_subscription_id'] > 0) {
+        include_once __DIR__ . '/portal_subscription_helper.php';
+        fh_portal_sub_apply_payment($conn, (int)$pay['platform_subscription_id'], $paymentId);
+    }
     return true;
 }
 
@@ -82,6 +87,7 @@ function pb_paymongo_create_checkout($conn, $opts) {
     $paymentId = pb_payment_create_row($conn, array(
         'booking_id' => isset($opts['booking_id']) ? $opts['booking_id'] : 0,
         'membership_id' => isset($opts['membership_id']) ? $opts['membership_id'] : 0,
+        'platform_subscription_id' => isset($opts['platform_subscription_id']) ? $opts['platform_subscription_id'] : 0,
         'customers_id' => isset($opts['customers_id']) ? $opts['customers_id'] : 0,
         'business_id' => isset($opts['business_id']) ? $opts['business_id'] : 0,
         'amount' => $amount,
@@ -127,6 +133,7 @@ function pb_paymongo_create_checkout($conn, $opts) {
                 'metadata' => array(
                     'payment_id' => (string)$paymentId,
                     'booking_id' => (string)(isset($opts['booking_id']) ? $opts['booking_id'] : 0),
+                    'platform_subscription_id' => (string)(isset($opts['platform_subscription_id']) ? $opts['platform_subscription_id'] : 0),
                 ),
             ),
         ),

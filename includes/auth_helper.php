@@ -65,6 +65,57 @@ function fh_auth_require_super_admin($redirect = 'index.php') {
     }
 }
 
+/**
+ * Soft-lock venue users whose trial/subscription expired onto subscription.php.
+ * Super Admin (portal or managing) is never locked.
+ */
+function fh_auth_subscription_soft_lock($conn) {
+    if (!fh_auth_is_logged_in() || !$conn) {
+        return;
+    }
+    if (fh_auth_is_super_admin()) {
+        return;
+    }
+    $role = isset($_SESSION['user_role']) ? $_SESSION['user_role'] : '';
+    if ($role !== FH_ROLE_BUSINESS_ADMIN && $role !== FH_ROLE_BUSINESS_STAFF) {
+        return;
+    }
+
+    $page = basename(isset($_SERVER['PHP_SELF']) ? $_SERVER['PHP_SELF'] : '');
+    $allowed = array('subscription.php', 'login.php', 'logout.php', 'process.php', 'profile.php');
+    if (in_array($page, $allowed, true)) {
+        return;
+    }
+
+    include_once __DIR__ . '/portal_subscription_helper.php';
+    if (!function_exists('fh_portal_sub_access_state')) {
+        return;
+    }
+
+    $bizId = fh_auth_user_business_id();
+    if ($bizId <= 0) {
+        return;
+    }
+
+    $access = fh_portal_sub_access_state($conn, $bizId);
+    if (!empty($access['is_access_ok'])) {
+        return;
+    }
+    // Only soft-lock when a subscription record exists and is expired/pending
+    if ($access['state'] === 'none') {
+        return;
+    }
+    if ($access['state'] === 'expired' || $access['state'] === 'pending') {
+        // Staff cannot pay — send them a clear page; admins go to subscription
+        if ($role === FH_ROLE_BUSINESS_STAFF) {
+            header('Location: profile.php?sub_expired=1');
+            exit;
+        }
+        header('Location: subscription.php');
+        exit;
+    }
+}
+
 function fh_auth_role_label($role) {
     switch ($role) {
         case FH_ROLE_SUPER: return 'Super Admin';
@@ -85,6 +136,54 @@ function fh_auth_set_session($userRow) {
     if ((int)$userRow['user_business_account'] > 0) {
         $_SESSION['admin_business_id'] = (int)$userRow['user_business_account'];
     }
+    // Preserve Super Admin venue-managing context across profile refresh;
+    // clear it when the logged-in user is no longer Super Admin.
+    if ($userRow['user_role'] !== FH_ROLE_SUPER) {
+        unset($_SESSION['super_admin_managing_business']);
+    }
+}
+
+/**
+ * Super Admin enters a venue dashboard without changing login identity.
+ * Keeps user_role = super_admin; only sets working business context.
+ */
+function fh_auth_enter_business($conn, $businessId) {
+    if (!fh_auth_is_super_admin()) {
+        return false;
+    }
+    $businessId = (int)$businessId;
+    if ($businessId <= 1) {
+        return false;
+    }
+    $sql = $conn->query(
+        "SELECT business_id, business_name, business_status
+         FROM business_account
+         WHERE business_id = $businessId
+         LIMIT 1"
+    );
+    if (!$sql || !$sql->fetch_assoc()) {
+        return false;
+    }
+    $_SESSION['admin_business_id'] = $businessId;
+    $_SESSION['super_admin_managing_business'] = $businessId;
+    return true;
+}
+
+function fh_auth_exit_business() {
+    unset($_SESSION['super_admin_managing_business']);
+}
+
+function fh_auth_is_managing_business() {
+    return fh_auth_is_super_admin()
+        && isset($_SESSION['super_admin_managing_business'])
+        && (int)$_SESSION['super_admin_managing_business'] > 0;
+}
+
+function fh_auth_managing_business_id() {
+    if (!fh_auth_is_managing_business()) {
+        return 0;
+    }
+    return (int)$_SESSION['super_admin_managing_business'];
 }
 
 function fh_auth_avatar_url($avatar = null) {

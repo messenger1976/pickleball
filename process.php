@@ -858,6 +858,8 @@ unset($_SESSION['cart_business_id']);
             $elements['msg'] = $result['msg'];
             break;
          case('PartnerSignup'):
+            include_once(__DIR__ . '/includes/portal_subscription_helper.php');
+            include_once(__DIR__ . '/includes/email_helper.php');
             $elements = array('validation_status' => 'F', 'msg' => '');
 
             $business_name = trim($_POST['business_name']);
@@ -872,6 +874,16 @@ unset($_SESSION['cart_business_id']);
             $contactperson = trim($_POST['contactperson']);
             $contactnumber = trim($_POST['contactnumber']);
             $description = trim($_POST['description']);
+            $password = isset($_POST['password']) ? (string)$_POST['password'] : '';
+            $password2 = isset($_POST['password_confirm']) ? (string)$_POST['password_confirm'] : '';
+            $signupIntent = (isset($_POST['signup_intent']) && $_POST['signup_intent'] === 'subscribe') ? 'subscribe' : 'trial';
+            $billingCycle = (isset($_POST['billing_cycle']) && $_POST['billing_cycle'] === 'yearly') ? 'yearly' : 'monthly';
+
+            $settings = fh_portal_sub_get_settings($conn);
+            if ($signupIntent === 'trial' && empty($settings['trial_enabled'])) {
+                $elements['msg'] = 'Free trial is not available right now. Please choose Subscribe.';
+                break;
+            }
 
             if ($business_name === '' || $subdomain === '' || $address === '' || $city === '' ||
                 $province === '' || $country === '' || $zipcode === '' || $barangay === '' ||
@@ -887,10 +899,23 @@ unset($_SESSION['cart_business_id']);
                 $elements['msg'] = 'Please enter a valid email address.';
                 break;
             }
+            if (strlen($password) < 6) {
+                $elements['msg'] = 'Password must be at least 6 characters.';
+                break;
+            }
+            if ($password !== $password2) {
+                $elements['msg'] = 'Password confirmation does not match.';
+                break;
+            }
+            if (!fh_portal_sub_table_exists($conn)) {
+                $elements['msg'] = 'Subscription signup is not available yet. Please contact support.';
+                break;
+            }
 
             $safeName = $conn->real_escape_string($business_name);
             $safeEmail = $conn->real_escape_string($email);
             $safeSub = $conn->real_escape_string($subdomain);
+            $safeUserName = $safeEmail;
 
             $dup = $conn->query(
                 "SELECT business_id FROM business_account
@@ -901,6 +926,16 @@ unset($_SESSION['cart_business_id']);
             );
             if ($dup && $dup->num_rows > 0) {
                 $elements['msg'] = 'A business with this name, email, or short name already exists. Please contact us if you need help.';
+                break;
+            }
+
+            $dupUser = $conn->query(
+                "SELECT user_id FROM user
+                 WHERE user_name='$safeUserName' OR user_email='$safeEmail'
+                 LIMIT 1"
+            );
+            if ($dupUser && $dupUser->num_rows > 0) {
+                $elements['msg'] = 'An admin account with this email already exists. Please sign in or use a different email.';
                 break;
             }
 
@@ -920,23 +955,58 @@ unset($_SESSION['cart_business_id']);
             $safePerson = $conn->real_escape_string($contactperson);
             $signupDate = date('Y-m-d');
             $status = 0;
+            $passHash = md5($password);
+            $safeFullName = $conn->real_escape_string($contactperson);
+            $role = FH_ROLE_BUSINESS_ADMIN;
 
-            $sql = "INSERT INTO business_account (
-                business_name, business_address, business_city, business_province,
-                business_country, business_zipcode, business_email, business_contact,
-                business_cont_person, business_signup_date, business_status, business_subdomain
-            ) VALUES (
-                '$safeName','$safeAddress','$safeCity','$safeProvince','$safeCountry','$safeZip',
-                '$safeEmail','$safeContact','$safePerson','$signupDate','$status','$safeSub'
-            )";
-
-            if ($conn->query($sql) === TRUE) {
-                $elements['validation_status'] = 'T';
-                $newBizId = $conn->insert_id;
+            $conn->begin_transaction();
+            try {
+                $sql = "INSERT INTO business_account (
+                    business_name, business_address, business_city, business_province,
+                    business_country, business_zipcode, business_email, business_contact,
+                    business_cont_person, business_signup_date, business_status, business_subdomain
+                ) VALUES (
+                    '$safeName','$safeAddress','$safeCity','$safeProvince','$safeCountry','$safeZip',
+                    '$safeEmail','$safeContact','$safePerson','$signupDate','$status','$safeSub'
+                )";
+                if ($conn->query($sql) !== TRUE) {
+                    throw new Exception('Unable to create business account.');
+                }
+                $newBizId = (int)$conn->insert_id;
                 fh_ensure_business_page($conn, $newBizId);
-                $elements['msg'] = 'Thank you! Your application has been received. Our team will review it and contact you at ' . htmlspecialchars($email) . ' within 2–3 business days.';
-            } else {
-                $elements['msg'] = 'Unable to submit application. Please try again or contact us directly.';
+
+                $userSql = "INSERT INTO user
+                    (user_name, user_password, user_fullname, user_role, user_email, user_status, user_business_account)
+                    VALUES ('$safeUserName','$passHash','$safeFullName','$role','$safeEmail',0,$newBizId)";
+                if ($conn->query($userSql) !== TRUE) {
+                    throw new Exception('Unable to create admin user.');
+                }
+                $newUserId = (int)$conn->insert_id;
+
+                $subCreate = fh_portal_sub_create_pending($conn, array(
+                    'business_id' => $newBizId,
+                    'owner_user_id' => $newUserId,
+                    'signup_intent' => $signupIntent,
+                    'billing_cycle' => $billingCycle,
+                    'months' => $billingCycle === 'yearly' ? 12 : 1,
+                ));
+                if (!$subCreate['ok']) {
+                    throw new Exception($subCreate['msg']);
+                }
+
+                $mailOk = fh_portal_sub_send_activation_email($email, $business_name, $subCreate['token'], $signupIntent);
+                $conn->commit();
+
+                $elements['validation_status'] = 'T';
+                if ($mailOk) {
+                    $elements['msg'] = 'Account created. Please check your email (' . htmlspecialchars($email) . ') and click the activation link to continue.';
+                } else {
+                    $activateUrl = fh_portal_sub_activation_url($subCreate['token']);
+                    $elements['msg'] = 'Account created, but we could not send email. Use this activation link: ' . $activateUrl;
+                }
+            } catch (Exception $e) {
+                $conn->rollback();
+                $elements['msg'] = $e->getMessage() !== '' ? $e->getMessage() : 'Unable to submit application. Please try again or contact us directly.';
             }
             break;
 

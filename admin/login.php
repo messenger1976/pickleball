@@ -1,5 +1,6 @@
 <?php
 include('config.php');
+include_once(__DIR__ . '/../includes/portal_subscription_helper.php');
 if (isset($_SESSION['user_id'])) {
     header("Location: index.php");
     exit;
@@ -17,12 +18,27 @@ if (isset($_POST['submit'])) {
             $bizCheck = $conn->query("SELECT business_status FROM business_account WHERE business_id=" . (int)$row['user_business_account'] . " LIMIT 1");
             if ($bizCheck && $bizRow = $bizCheck->fetch_assoc()) {
                 if ((int)$bizRow['business_status'] !== 1 && $row['user_role'] !== FH_ROLE_SUPER) {
-                    $error = 'Your venue account is not active yet. Please contact the portal administrator.';
+                    $error = 'Your venue account is not active yet. Please check your email for the activation link, or contact support.';
+                }
+            }
+            if ($error === '' && $row['user_role'] !== FH_ROLE_SUPER) {
+                $access = fh_portal_sub_access_state($conn, (int)$row['user_business_account']);
+                if ($access['state'] === 'pending') {
+                    $error = 'Your venue subscription is not active yet. Please complete activation or payment from your email link.';
                 }
             }
         }
         if ($error === '') {
             fh_auth_set_session($row);
+            fh_auth_exit_business();
+            $bizId = (int)$row['user_business_account'];
+            if ($bizId > 0 && $row['user_role'] !== FH_ROLE_SUPER) {
+                $access = fh_portal_sub_access_state($conn, $bizId);
+                if (!empty($access['is_expired']) || $access['state'] === 'expired') {
+                    header('Location: subscription.php');
+                    exit;
+                }
+            }
             header("Location: index.php");
             exit;
         }
@@ -43,7 +59,7 @@ if (isset($_POST['submit'])) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/login.css?v=20260803b" type="text/css" />
+    <link rel="stylesheet" href="css/login.css?v=20260804a" type="text/css" />
 </head>
 <body class="login-page">
 

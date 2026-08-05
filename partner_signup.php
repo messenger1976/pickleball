@@ -2,6 +2,7 @@
 include('admin/config.php');
 include_once(__DIR__ . '/includes/business_helper.php');
 include_once(__DIR__ . '/includes/geo_helper.php');
+include_once(__DIR__ . '/includes/portal_subscription_helper.php');
 
 fh_geo_ensure_seeded($conn);
 $geoCountries = fh_geo_get_countries($conn);
@@ -37,6 +38,11 @@ $geoTowns = $selectedProvinceId > 0 ? fh_geo_get_towns($conn, $selectedProvinceI
 $selectedTownId = fh_geo_find_town_id($conn, $custProvince, $custTown);
 $geoBarangays = $selectedTownId > 0 ? fh_geo_get_barangays($conn, $selectedTownId) : array();
 $hasBarangayList = count($geoBarangays) > 0;
+
+$subPricing = fh_portal_sub_pricing_preview($conn);
+$subSettings = $subPricing['settings'];
+$trialEnabled = !empty($subSettings['trial_enabled']);
+$trialDays = (int)$subSettings['trial_days'];
 
 $pagetitle = "Partner With Us — Pickleball Portal";
 $submitted = false;
@@ -153,6 +159,7 @@ include('header.php');
 .partner-signup input[type=text],
 .partner-signup input[type=email],
 .partner-signup input[type=tel],
+.partner-signup input[type=password],
 .partner-signup select,
 .partner-signup textarea {
     width: 100%;
@@ -172,6 +179,57 @@ include('header.php');
     outline: none;
     border-color: var(--pb-leaf);
     box-shadow: 0 0 0 3px rgba(47, 143, 99, 0.15);
+}
+.partner-plan-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 8px 0 12px;
+}
+.partner-plan-option {
+    position: relative;
+    border: 2px solid var(--pb-line);
+    border-radius: 10px;
+    padding: 14px 14px 14px 40px;
+    cursor: pointer;
+    background: #fff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.partner-plan-option:has(input:checked) {
+    border-color: var(--pb-leaf);
+    box-shadow: 0 0 0 3px rgba(47, 143, 99, 0.12);
+}
+.partner-plan-option input {
+    position: absolute;
+    left: 14px;
+    top: 18px;
+}
+.partner-plan-option strong {
+    display: block;
+    color: var(--pb-court);
+    font-size: 15px;
+}
+.partner-plan-option span {
+    display: block;
+    margin-top: 4px;
+    color: var(--pb-muted);
+    font-size: 13px;
+    line-height: 1.4;
+}
+.partner-billing-wrap {
+    margin: 8px 0 4px;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid var(--pb-line);
+}
+.partner-billing-wrap label {
+    margin-top: 8px;
+}
+@media (max-width: 600px) {
+    .partner-plan-grid {
+        grid-template-columns: 1fr;
+    }
 }
 .partner-signup .row2 {
     display: grid;
@@ -277,13 +335,49 @@ include('header.php');
 
     <div class="partner-signup">
         <div class="partner-signup-card" id="signupCard">
-            <p class="form-kicker">Partner application</p>
+            <p class="form-kicker">Partner registration</p>
             <h2 class="form-title">Register your venue</h2>
-            <p class="intro">Tell us about your club or court facility. Our team reviews applications within 2–3 business days.</p>
+            <p class="intro"><?php echo htmlspecialchars($subSettings['signup_blurb']); ?></p>
 
             <div id="msgbox"></div>
 
             <form id="frmPartnerSignup" novalidate>
+                <label>Choose your plan *</label>
+                <div class="partner-plan-grid">
+                    <?php if ($trialEnabled): ?>
+                    <label class="partner-plan-option">
+                        <input type="radio" name="signup_intent" value="trial" checked />
+                        <strong>Free Trial</strong>
+                        <span><?php echo (int)$trialDays; ?> days free access. Subscribe anytime from your account settings.</span>
+                    </label>
+                    <?php endif; ?>
+                    <label class="partner-plan-option">
+                        <input type="radio" name="signup_intent" value="subscribe" <?php echo !$trialEnabled ? 'checked' : ''; ?> />
+                        <strong>Subscribe</strong>
+                        <span>
+                            Monthly <?php echo fh_portal_sub_format_money($subPricing['monthly']['total']); ?>
+                            (incl. fee) · Yearly <?php echo fh_portal_sub_format_money($subPricing['yearly']['total']); ?>
+                            (<?php echo htmlspecialchars((string)$subSettings['yearly_discount_pct']); ?>% off + fee)
+                        </span>
+                    </label>
+                </div>
+
+                <div class="partner-billing-wrap" id="billingWrap" style="<?php echo $trialEnabled ? 'display:none;' : ''; ?>">
+                    <label style="margin-top:0;">Billing cycle *</label>
+                    <div class="row2">
+                        <label class="partner-plan-option" style="padding-left:36px;">
+                            <input type="radio" name="billing_cycle" value="monthly" checked />
+                            <strong>Monthly</strong>
+                            <span><?php echo fh_portal_sub_format_money($subPricing['monthly']['subtotal']); ?> + fee <?php echo fh_portal_sub_format_money($subPricing['monthly']['fee']); ?> = <?php echo fh_portal_sub_format_money($subPricing['monthly']['total']); ?></span>
+                        </label>
+                        <label class="partner-plan-option" style="padding-left:36px;">
+                            <input type="radio" name="billing_cycle" value="yearly" />
+                            <strong>Yearly</strong>
+                            <span><?php echo fh_portal_sub_format_money($subPricing['yearly']['subtotal']); ?> + fee <?php echo fh_portal_sub_format_money($subPricing['yearly']['fee']); ?> = <?php echo fh_portal_sub_format_money($subPricing['yearly']['total']); ?></span>
+                        </label>
+                    </div>
+                </div>
+
                 <label for="business_name">Venue / Club Name *</label>
                 <input type="text" id="business_name" name="business_name" placeholder="e.g. Bohol Pickleball Club" required />
 
@@ -339,8 +433,9 @@ include('header.php');
 
                 <div class="row2">
                     <div>
-                        <label for="email">Venue Email *</label>
+                        <label for="email">Admin Email (login) *</label>
                         <input type="email" id="email" name="email" placeholder="bookings@yourclub.com" required />
+                        <p class="hint">This email is your admin username and receives the activation link.</p>
                     </div>
                     <div>
                         <label for="contactnumber">Contact Number *</label>
@@ -348,15 +443,26 @@ include('header.php');
                     </div>
                 </div>
 
+                <div class="row2">
+                    <div>
+                        <label for="password">Password *</label>
+                        <input type="password" id="password" name="password" minlength="6" required autocomplete="new-password" />
+                    </div>
+                    <div>
+                        <label for="password_confirm">Confirm Password *</label>
+                        <input type="password" id="password_confirm" name="password_confirm" minlength="6" required autocomplete="new-password" />
+                    </div>
+                </div>
+
                 <label for="description">About your venue (optional)</label>
                 <textarea id="description" name="description" rows="4" placeholder="Indoor/outdoor courts, surface type, amenities, operating hours..."></textarea>
 
-                <button type="submit" class="btn-submit">Submit Application</button>
+                <button type="submit" class="btn-submit">Create Account</button>
             </form>
         </div>
 
         <div class="partner-signup-card partner-success" id="successCard" style="display:none;">
-            <h2>Application received</h2>
+            <h2>Check your email</h2>
             <p id="successMsg"></p>
             <p style="margin-top:24px;">
                 <a href="home.php" class="portal-btn portal-btn-primary">Back to Home</a>
@@ -434,6 +540,17 @@ $(document).ready(function() {
         return !hasError;
     }
 
+    function syncBillingWrap() {
+        var intent = $('input[name="signup_intent"]:checked').val();
+        if (intent === 'subscribe') {
+            $('#billingWrap').show();
+        } else {
+            $('#billingWrap').hide();
+        }
+    }
+    $(document).on('change', 'input[name="signup_intent"]', syncBillingWrap);
+    syncBillingWrap();
+
     $('#frmPartnerSignup').submit(function(e) {
         e.preventDefault();
 
@@ -445,6 +562,21 @@ $(document).ready(function() {
                 padding: '12px',
                 borderRadius: '8px',
                 marginBottom: '12px'
+            });
+            return;
+        }
+
+        var password = $('#password').val() || '';
+        var passwordConfirm = $('#password_confirm').val() || '';
+        if (password.length < 6) {
+            $('#msgbox').html('Password must be at least 6 characters.').css({
+                display: 'block', background: '#f8d7da', color: '#721c24', padding: '12px', borderRadius: '8px', marginBottom: '12px'
+            });
+            return;
+        }
+        if (password !== passwordConfirm) {
+            $('#msgbox').html('Password confirmation does not match.').css({
+                display: 'block', background: '#f8d7da', color: '#721c24', padding: '12px', borderRadius: '8px', marginBottom: '12px'
             });
             return;
         }
@@ -470,7 +602,11 @@ $(document).ready(function() {
                 contactperson: $('#contactperson').val(),
                 email: $('#email').val(),
                 contactnumber: $('#contactnumber').val(),
-                description: $('#description').val()
+                description: $('#description').val(),
+                password: password,
+                password_confirm: passwordConfirm,
+                signup_intent: $('input[name="signup_intent"]:checked').val(),
+                billing_cycle: $('input[name="billing_cycle"]:checked').val() || 'monthly'
             },
             dataType: 'json',
             success: function(data) {

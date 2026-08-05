@@ -66,6 +66,9 @@ function fh_admin_business_id($conn) {
         $id = (int)$_GET['business_id'];
         if (fh_resolve_business($conn, $id) || fh_auth_is_super_admin()) {
             $_SESSION['admin_business_id'] = $id;
+            if (fh_auth_is_super_admin() && function_exists('fh_auth_is_managing_business') && fh_auth_is_managing_business()) {
+                $_SESSION['super_admin_managing_business'] = $id;
+            }
         }
     }
     if (!isset($_SESSION['admin_business_id']) || (int)$_SESSION['admin_business_id'] <= 0) {
@@ -75,26 +78,74 @@ function fh_admin_business_id($conn) {
     return (int)$_SESSION['admin_business_id'];
 }
 
+function fh_admin_business_name($conn, $businessId) {
+    $businessId = (int)$businessId;
+    if ($businessId <= 0) {
+        return '';
+    }
+    $sql = $conn->query("SELECT business_name FROM business_account WHERE business_id = $businessId LIMIT 1");
+    if ($sql && ($row = $sql->fetch_assoc())) {
+        return $row['business_name'];
+    }
+    return '';
+}
+
+function fh_admin_managing_banner($conn) {
+    if (!function_exists('fh_auth_is_managing_business') || !fh_auth_is_managing_business()) {
+        return '';
+    }
+    $bizId = fh_auth_managing_business_id();
+    $name = fh_admin_business_name($conn, $bizId);
+    if ($name === '') {
+        $name = 'Business #' . $bizId;
+    }
+    $html = '<div class="admin-managing-banner" role="status">';
+    $html .= '<div class="admin-managing-banner-text">';
+    $html .= '<strong>Venue dashboard:</strong> ' . htmlspecialchars($name);
+    $html .= ' <span class="admin-managing-banner-note">Logged in as Super Admin</span>';
+    $html .= '</div>';
+    $html .= '<a class="admin-managing-banner-exit" href="enter_business.php?exit=1">Exit to Portal</a>';
+    $html .= '</div>';
+    return $html;
+}
+
 function fh_admin_business_selector($conn, $action = '') {
     if (!fh_auth_is_super_admin()) {
         $bizId = fh_auth_user_business_id();
         $biz = fh_resolve_business($conn, $bizId);
         if (!$biz) {
             $bizSql = $conn->query("SELECT business_name FROM business_account WHERE business_id = $bizId LIMIT 1");
-            $biz = $bizSql ? $bizSql->fetch_assoc() : array('business_name' => 'Your Restaurant');
+            $biz = $bizSql ? $bizSql->fetch_assoc() : array('business_name' => 'Your Venue');
         }
-        return '<div class="w3-panel w3-light-grey w3-leftbar w3-border-green" style="margin:12px 0;"><strong>Managing:</strong> ' . htmlspecialchars($biz['business_name']) . '</div>';
+        return '<div class="alert alert-light border mb-3" role="status"><strong>Managing:</strong> ' . htmlspecialchars($biz['business_name']) . '</div>';
     }
     $businesses = fh_get_active_businesses($conn);
     $selectedId = fh_admin_business_id($conn);
-    $html = '<form method="GET" action="' . htmlspecialchars($action) . '" class="w3-panel w3-light-grey w3-leftbar w3-border-green" style="margin:12px 0;">';
-    $html .= '<label for="admin_business_id"><strong>Restaurant:</strong></label> ';
-    $html .= '<select id="admin_business_id" name="business_id" onchange="this.form.submit()" style="max-width:320px;padding:8px;">';
+    $selectedInList = false;
+    foreach ($businesses as $biz) {
+        if ((int)$biz['business_id'] === $selectedId) {
+            $selectedInList = true;
+            break;
+        }
+    }
+    if (!$selectedInList && $selectedId > 0) {
+        $pendingName = fh_admin_business_name($conn, $selectedId);
+        if ($pendingName !== '') {
+            array_unshift($businesses, array(
+                'business_id' => $selectedId,
+                'business_name' => $pendingName . ' (Pending)'
+            ));
+        }
+    }
+    $html = '<form method="GET" action="' . htmlspecialchars($action) . '" class="admin-venue-selector mb-3">';
+    $html .= '<div class="input-group" style="max-width:420px;">';
+    $html .= '<div class="input-group-prepend"><label class="input-group-text" for="admin_business_id">Venue</label></div>';
+    $html .= '<select id="admin_business_id" name="business_id" class="custom-select" onchange="this.form.submit()">';
     foreach ($businesses as $biz) {
         $sel = ((int)$biz['business_id'] === $selectedId) ? ' selected' : '';
         $html .= '<option value="' . (int)$biz['business_id'] . '"' . $sel . '>' . htmlspecialchars($biz['business_name']) . '</option>';
     }
-    $html .= '</select></form>';
+    $html .= '</select></div></form>';
     return $html;
 }
 

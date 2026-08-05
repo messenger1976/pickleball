@@ -41,7 +41,14 @@ include('header.php');
 include('navigation.php');
 ?>
 
-<link rel="stylesheet" href="../css/portal-order.css?v=20260714b" type="text/css" />
+<link rel="stylesheet" href="../css/portal-order.css?v=20260804c" type="text/css" />
+<?php if (isset($_GET['sub_expired'])): ?>
+<div class="w3-container" style="margin-top:16px;">
+    <div style="padding:12px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;color:#991b1b;">
+        Your venue subscription has expired. Please ask a Business Admin to renew it under <strong>Subscription</strong>.
+    </div>
+</div>
+<?php endif; ?>
 <style>
 .admin-profile-layout {
     display: grid;

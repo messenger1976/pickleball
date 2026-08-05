@@ -41,12 +41,21 @@
             }
         }
 
+        function locationTitle(location) {
+            if (location.type === 'business' || location.type === 'venue') {
+                return 'Venue';
+            }
+            return 'Customer';
+        }
+
         function buildPopupContent(location) {
-            var title = location.type === 'business' ? 'Restaurant' : 'Customer';
+            var title = locationTitle(location);
             var html = '<div style="max-width:240px;font-size:13px;line-height:1.45;">';
             html += '<strong>' + escapeHtml(location.name) + '</strong><br>';
             html += '<span style="color:#64748b;">' + title + '</span><br>';
-            html += escapeHtml(location.address);
+            if (location.address) {
+                html += escapeHtml(location.address);
+            }
             if (location.phone) {
                 html += '<br>Phone: ' + escapeHtml(location.phone);
             }
@@ -58,7 +67,7 @@
         }
 
         function addMarker(location, lat, lng) {
-            var isBusiness = location.type === 'business';
+            var isBusiness = location.type === 'business' || location.type === 'venue';
             var marker = L.circleMarker([lat, lng], {
                 radius: isBusiness ? 10 : 7,
                 fillColor: isBusiness ? '#2d6a4f' : '#dc2626',
@@ -127,20 +136,45 @@
             });
         }
 
-        if (config.business && config.business.address) {
-            geocodeQueue.push(config.business);
-        }
-        if (Array.isArray(config.customers)) {
-            config.customers.forEach(function(customer) {
-                if (customer && customer.address) {
-                    geocodeQueue.push(customer);
+        function collectLocations() {
+            var list = [];
+            if (Array.isArray(config.venues) && config.venues.length) {
+                list = config.venues.slice();
+            } else {
+                if (config.business) {
+                    list.push(config.business);
                 }
-            });
+                if (Array.isArray(config.customers)) {
+                    config.customers.forEach(function(customer) {
+                        if (customer) {
+                            list.push(customer);
+                        }
+                    });
+                }
+            }
+            return list;
         }
 
+        var locations = collectLocations();
+        locations.forEach(function(loc) {
+            if (!loc) {
+                return;
+            }
+            if (typeof loc.lat === 'number' && typeof loc.lng === 'number') {
+                addMarker(loc, loc.lat, loc.lng);
+            } else if (loc.address) {
+                geocodeQueue.push(loc);
+            }
+        });
+
         totalToGeocode = geocodeQueue.length;
-        if (totalToGeocode === 0) {
+        if (markers.length === 0 && totalToGeocode === 0) {
             setStatus('No addresses to display.');
+            return;
+        }
+
+        if (totalToGeocode === 0) {
+            finishMap();
             return;
         }
 

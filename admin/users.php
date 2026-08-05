@@ -9,12 +9,27 @@ if (!fh_auth_can_manage_users()) {
 $titleheader = 'Users & Roles';
 $adminBusinessId = fh_admin_business_id($conn);
 $isSuperAdmin = fh_auth_is_super_admin();
+$isManagingVenue = $isSuperAdmin && fh_auth_is_managing_business();
+if ($isManagingVenue) {
+    $managedId = fh_auth_managing_business_id();
+    if ($managedId > 0) {
+        $adminBusinessId = $managedId;
+        $_SESSION['admin_business_id'] = $managedId;
+    }
+    $titleheader = 'Staff Users';
+}
 $businesses = fh_get_all_businesses_admin($conn);
 $roles = fh_get_manageable_roles();
+if ($isManagingVenue) {
+    $roles = array(FH_ROLE_BUSINESS_ADMIN, FH_ROLE_BUSINESS_STAFF);
+}
 
 $userScopeSql = '';
 if (!$isSuperAdmin) {
     $userScopeSql = ' AND u.user_business_account = ' . (int)fh_auth_user_business_id()
+        . " AND u.user_role <> '" . $conn->real_escape_string(FH_ROLE_SUPER) . "'";
+} elseif ($isManagingVenue) {
+    $userScopeSql = ' AND u.user_business_account = ' . (int)$adminBusinessId
         . " AND u.user_role <> '" . $conn->real_escape_string(FH_ROLE_SUPER) . "'";
 }
 
@@ -79,10 +94,10 @@ $offset = ($page - 1) * $perPage;
 $showingFrom = $totalUsers > 0 ? $offset + 1 : 0;
 $showingTo = min($offset + $perPage, $totalUsers);
 
-$scopeWhere = 'WHERE user_id > 0' . ($isSuperAdmin
-    ? ''
-    : (' AND user_business_account = ' . (int)fh_auth_user_business_id()
-        . " AND user_role <> '" . $conn->real_escape_string(FH_ROLE_SUPER) . "'"));
+$scopeWhere = 'WHERE user_id > 0' . ((!$isSuperAdmin || $isManagingVenue)
+    ? (' AND user_business_account = ' . (int)($isManagingVenue ? $adminBusinessId : fh_auth_user_business_id())
+        . " AND user_role <> '" . $conn->real_escape_string(FH_ROLE_SUPER) . "'")
+    : '');
 $activeResult = $conn->query("SELECT COUNT(*) AS c FROM user $scopeWhere AND user_status=1");
 $activeCount = ($activeResult && ($arow = $activeResult->fetch_assoc())) ? (int)$arow['c'] : 0;
 $inactiveResult = $conn->query("SELECT COUNT(*) AS c FROM user $scopeWhere AND user_status=0");
@@ -162,7 +177,7 @@ include('header.php');
 include('navigation.php');
 ?>
 
-<link rel="stylesheet" href="../css/portal-order.css?v=20260714b" type="text/css" />
+<link rel="stylesheet" href="../css/portal-order.css?v=20260804c" type="text/css" />
 <style>
 .admin-orders-filter {
     display: flex;
@@ -292,15 +307,21 @@ include('navigation.php');
 
 <div class="w3-container admin-page-body">
     <div class="w3-container w3-teal">
-        <h1>Users &amp; Roles</h1>
-        <p>Create staff accounts and assign restaurant access by role.</p>
+        <h1><?php echo $isManagingVenue ? 'Staff Users' : 'Users &amp; Roles'; ?></h1>
+        <p><?php echo $isManagingVenue
+            ? 'Manage Business Admin and Staff accounts for this venue.'
+            : 'Create staff accounts and assign restaurant access by role.'; ?></p>
     </div>
 
+    <?php if (!$isManagingVenue): ?>
     <?php echo fh_admin_business_selector($conn, 'users.php'); ?>
+    <?php endif; ?>
 
     <p class="admin-users-tip">
         <strong>Roles:</strong>
+        <?php if (!$isManagingVenue): ?>
         <em>Super Admin</em> — full portal access.
+        <?php endif; ?>
         <em>Business Admin</em> — manage one restaurant (items, menu, orders, store page, staff).
         <em>Business Staff</em> — view/update menu and orders for assigned restaurant.
     </p>
@@ -547,7 +568,7 @@ include('navigation.php');
                     </div>
                 </div>
 
-                <?php if ($isSuperAdmin): ?>
+                <?php if ($isSuperAdmin && !$isManagingVenue): ?>
                 <label for="user_business_account">Restaurant</label>
                 <select id="user_business_account">
                     <option value="0">— Portal / Super Admin —</option>
@@ -557,7 +578,7 @@ include('navigation.php');
                 </select>
                 <p class="portal-order-modal-hint">Required for Business Admin and Business Staff roles.</p>
                 <?php else: ?>
-                <input type="hidden" id="user_business_account" value="<?php echo (int)fh_auth_user_business_id(); ?>">
+                <input type="hidden" id="user_business_account" value="<?php echo (int)($isManagingVenue ? $adminBusinessId : fh_auth_user_business_id()); ?>">
                 <?php endif; ?>
             </div>
         </div>
@@ -571,7 +592,7 @@ include('navigation.php');
 <script>
 (function ($) {
     var $modal = $('#userModal');
-    var defaultBizId = <?php echo $isSuperAdmin ? 0 : (int)fh_auth_user_business_id(); ?>;
+    var defaultBizId = <?php echo ($isSuperAdmin && !$isManagingVenue) ? 0 : (int)$adminBusinessId; ?>;
 
     function openModal($el) {
         $el.addClass('is-open').attr('aria-hidden', 'false');
