@@ -998,6 +998,7 @@
                 'description' => 'Venue subscription — ' . ($cycle === 'yearly' ? 'yearly' : ($amounts['months'] . ' month(s)')),
                 'business_id' => $bizId,
                 'platform_subscription_id' => (int)$sub['subscription_id'],
+                'credentials' => 'platform',
                 'success_url' => $successUrl,
                 'cancel_url' => $cancelUrl,
             ));
