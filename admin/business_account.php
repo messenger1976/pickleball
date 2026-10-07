@@ -569,6 +569,7 @@ include('navigation.php');
                             <td class="portal-orders-col-action">
                                 <div class="portal-orders-actions">
                                     <a class="portal-orders-action-btn" href="enter_business.php?business_id=<?php echo $bizId; ?>" title="Open venue dashboard" aria-label="Login to business dashboard #<?php echo $bizId; ?>"><i class="fa fa-sign-in" aria-hidden="true"></i></a>
+                                    <a class="portal-orders-action-btn" href="paymongo_setup.php?business_id=<?php echo $bizId; ?>" title="PayMongo setup" aria-label="PayMongo setup for business #<?php echo $bizId; ?>"><i class="fa fa-key" aria-hidden="true"></i></a>
                                     <button type="button" class="portal-orders-action-btn btn-business-edit" data-businessid="<?php echo $bizId; ?>" title="Edit business" aria-label="Edit business #<?php echo $bizId; ?>">✎</button>
                                 </div>
                             </td>

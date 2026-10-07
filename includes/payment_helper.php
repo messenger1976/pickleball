@@ -2,6 +2,214 @@
 include_once __DIR__ . '/../admin/payment_config.php';
 include_once __DIR__ . '/realtime_helper.php';
 
+/**
+ * Per-business PayMongo gateway settings.
+ *
+ * Every business account may connect its own PayMongo account. Court bookings
+ * and membership payments then use the venue's keys; when a venue has not
+ * connected an account, the platform keys (PB_PAYMONGO_* config) are used.
+ * Platform subscription fees always use the platform account.
+ */
+
+function pb_paymongo_business_columns_ready($conn) {
+    static $ready = null;
+    if ($ready !== null) {
+        return $ready;
+    }
+    $ready = false;
+    if ($conn) {
+        $res = $conn->query("SHOW COLUMNS FROM business_account LIKE 'business_paymongo_secret_key'");
+        if ($res && $res->num_rows > 0) {
+            $ready = true;
+        }
+    }
+    return $ready;
+}
+
+function pb_business_paymongo_settings($conn, $businessId) {
+    $businessId = (int)$businessId;
+    $settings = array(
+        'business_id' => $businessId,
+        'enabled' => 0,
+        'public_key' => '',
+        'secret_key' => '',
+        'webhook_secret' => '',
+        'updated_at' => '',
+        'configured' => false,
+    );
+    if ($businessId <= 0 || !pb_paymongo_business_columns_ready($conn)) {
+        return $settings;
+    }
+    $sql = $conn->query(
+        "SELECT business_paymongo_enabled, business_paymongo_public_key,
+                business_paymongo_secret_key, business_paymongo_webhook_secret,
+                business_paymongo_updated_at
+         FROM business_account
+         WHERE business_id = $businessId
+         LIMIT 1"
+    );
+    if (!$sql || !($row = $sql->fetch_assoc())) {
+        return $settings;
+    }
+    $settings['enabled'] = ((int)$row['business_paymongo_enabled'] === 1) ? 1 : 0;
+    $settings['public_key'] = isset($row['business_paymongo_public_key']) ? (string)$row['business_paymongo_public_key'] : '';
+    $settings['secret_key'] = isset($row['business_paymongo_secret_key']) ? (string)$row['business_paymongo_secret_key'] : '';
+    $settings['webhook_secret'] = isset($row['business_paymongo_webhook_secret']) ? (string)$row['business_paymongo_webhook_secret'] : '';
+    $settings['updated_at'] = isset($row['business_paymongo_updated_at']) ? (string)$row['business_paymongo_updated_at'] : '';
+    $settings['configured'] = ($settings['enabled'] === 1 && $settings['secret_key'] !== '');
+    return $settings;
+}
+
+/**
+ * Save a business's PayMongo credentials. Secret fields left blank keep the
+ * existing stored value (write-only semantics).
+ * Returns ['ok'=>bool, 'msg'=>string].
+ */
+function pb_business_paymongo_save($conn, $businessId, $data) {
+    $businessId = (int)$businessId;
+    if ($businessId <= 0) {
+        return array('ok' => false, 'msg' => 'Choose a business account first.');
+    }
+    if (!pb_paymongo_business_columns_ready($conn)) {
+        return array('ok' => false, 'msg' => 'PayMongo columns are missing. Run sql/migrate_business_paymongo.sql first.');
+    }
+
+    $current = pb_business_paymongo_settings($conn, $businessId);
+    $enabled = !empty($data['enabled']) ? 1 : 0;
+    $clear = !empty($data['clear_keys']);
+
+    $publicKey = trim((string)(isset($data['public_key']) ? $data['public_key'] : ''));
+    $secretKey = trim((string)(isset($data['secret_key']) ? $data['secret_key'] : ''));
+    $webhookSecret = trim((string)(isset($data['webhook_secret']) ? $data['webhook_secret'] : ''));
+
+    if ($clear) {
+        $publicKey = '';
+        $secretKey = '';
+        $webhookSecret = '';
+        $enabled = 0;
+    } else {
+        if ($secretKey === '') {
+            $secretKey = $current['secret_key'];
+        }
+        if ($publicKey === '') {
+            $publicKey = $current['public_key'];
+        }
+        if ($webhookSecret === '') {
+            $webhookSecret = $current['webhook_secret'];
+        }
+    }
+
+    if ($enabled === 1 && $secretKey === '') {
+        return array('ok' => false, 'msg' => 'A PayMongo secret key is required to enable this business account.');
+    }
+    if ($secretKey !== '' && strpos($secretKey, 'sk_') !== 0) {
+        return array('ok' => false, 'msg' => 'The secret key should start with "sk_".');
+    }
+    if ($publicKey !== '' && strpos($publicKey, 'pk_') !== 0) {
+        return array('ok' => false, 'msg' => 'The public key should start with "pk_".');
+    }
+    if ($webhookSecret !== '' && strpos($webhookSecret, 'whsec_') !== 0) {
+        return array('ok' => false, 'msg' => 'The webhook secret should start with "whsec_".');
+    }
+
+    $safePublic = $conn->real_escape_string($publicKey);
+    $safeSecret = $conn->real_escape_string($secretKey);
+    $safeWebhook = $conn->real_escape_string($webhookSecret);
+    $ok = $conn->query(
+        "UPDATE business_account SET
+            business_paymongo_enabled = $enabled,
+            business_paymongo_public_key = " . ($publicKey === '' ? 'NULL' : "'$safePublic'") . ",
+            business_paymongo_secret_key = " . ($secretKey === '' ? 'NULL' : "'$safeSecret'") . ",
+            business_paymongo_webhook_secret = " . ($webhookSecret === '' ? 'NULL' : "'$safeWebhook'") . ",
+            business_paymongo_updated_at = NOW()
+         WHERE business_id = $businessId"
+    );
+    if (!$ok) {
+        return array('ok' => false, 'msg' => 'Could not save PayMongo settings: ' . $conn->error);
+    }
+    return array('ok' => true, 'msg' => 'PayMongo settings saved.');
+}
+
+function pb_paymongo_platform_credentials() {
+    return array(
+        'secret' => PB_PAYMONGO_SECRET_KEY,
+        'public' => PB_PAYMONGO_PUBLIC_KEY,
+        'webhook_secret' => PB_PAYMONGO_WEBHOOK_SECRET,
+        'business_id' => 0,
+        'source' => 'platform',
+    );
+}
+
+/**
+ * Resolve which PayMongo account should process a payment.
+ *
+ * $mode: 'auto'     -> business account when configured, else platform
+ *        'business' -> only the business account (demo when missing)
+ *        'platform' -> always the platform account (subscription fees)
+ */
+function pb_paymongo_resolve_credentials($conn, $businessId, $mode = 'auto') {
+    $businessId = (int)$businessId;
+    $mode = ($mode === 'platform' || $mode === 'business') ? $mode : 'auto';
+
+    if ($mode !== 'platform' && $businessId > 0) {
+        $settings = pb_business_paymongo_settings($conn, $businessId);
+        if (!empty($settings['configured'])) {
+            return array(
+                'secret' => $settings['secret_key'],
+                'public' => $settings['public_key'],
+                'webhook_secret' => $settings['webhook_secret'],
+                'business_id' => $businessId,
+                'source' => 'business',
+            );
+        }
+        if ($mode === 'business') {
+            return array(
+                'secret' => '',
+                'public' => '',
+                'webhook_secret' => '',
+                'business_id' => $businessId,
+                'source' => 'none',
+            );
+        }
+    }
+    return pb_paymongo_platform_credentials();
+}
+
+function pb_paymongo_configured_for_business($conn, $businessId, $mode = 'auto') {
+    $creds = pb_paymongo_resolve_credentials($conn, $businessId, $mode);
+    return $creds['secret'] !== '';
+}
+
+function pb_paymongo_webhook_url() {
+    return pb_app_base_url() . '/webhooks/paymongo.php';
+}
+
+/**
+ * Verify a PayMongo webhook signature header (t=..,te=..,li=..).
+ */
+function pb_paymongo_verify_signature($rawPayload, $signatureHeader, $secret) {
+    if ($secret === '' || $signatureHeader === '') {
+        return false;
+    }
+    $parts = array();
+    foreach (explode(',', $signatureHeader) as $chunk) {
+        $kv = explode('=', $chunk, 2);
+        if (count($kv) === 2) {
+            $parts[trim($kv[0])] = trim($kv[1]);
+        }
+    }
+    if (empty($parts['t'])) {
+        return false;
+    }
+    $expected = hash_hmac('sha256', $parts['t'] . '.' . $rawPayload, $secret);
+    foreach (array('li', 'te') as $key) {
+        if (!empty($parts[$key]) && hash_equals($expected, $parts[$key])) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function pb_payment_create_row($conn, $data) {
     $bookingId = (int)(isset($data['booking_id']) ? $data['booking_id'] : 0);
     $membershipId = (int)(isset($data['membership_id']) ? $data['membership_id'] : 0);
@@ -84,18 +292,22 @@ function pb_paymongo_create_checkout($conn, $opts) {
     $successUrl = isset($opts['success_url']) ? $opts['success_url'] : (pb_app_base_url() . '/my_bookings.php?paid=1');
     $cancelUrl = isset($opts['cancel_url']) ? $opts['cancel_url'] : (pb_app_base_url() . '/my_bookings.php?paid=0');
 
+    $businessId = (int)(isset($opts['business_id']) ? $opts['business_id'] : 0);
+    $credMode = isset($opts['credentials']) ? $opts['credentials'] : 'auto';
+    $credentials = pb_paymongo_resolve_credentials($conn, $businessId, $credMode);
+
     $paymentId = pb_payment_create_row($conn, array(
         'booking_id' => isset($opts['booking_id']) ? $opts['booking_id'] : 0,
         'membership_id' => isset($opts['membership_id']) ? $opts['membership_id'] : 0,
         'platform_subscription_id' => isset($opts['platform_subscription_id']) ? $opts['platform_subscription_id'] : 0,
         'customers_id' => isset($opts['customers_id']) ? $opts['customers_id'] : 0,
-        'business_id' => isset($opts['business_id']) ? $opts['business_id'] : 0,
+        'business_id' => $businessId,
         'amount' => $amount,
         'provider' => 'paymongo',
         'payment_status' => 'pending',
     ));
 
-    if (!pb_paymongo_configured()) {
+    if ($credentials['secret'] === '') {
         // Demo mode: local fake checkout page
         $demoUrl = pb_app_base_url() . '/pay_demo.php?payment_id=' . $paymentId;
         $safeUrl = $conn->real_escape_string($demoUrl);
@@ -132,6 +344,7 @@ function pb_paymongo_create_checkout($conn, $opts) {
                 'cancel_url' => $cancelUrl,
                 'metadata' => array(
                     'payment_id' => (string)$paymentId,
+                    'business_id' => (string)$businessId,
                     'booking_id' => (string)(isset($opts['booking_id']) ? $opts['booking_id'] : 0),
                     'platform_subscription_id' => (string)(isset($opts['platform_subscription_id']) ? $opts['platform_subscription_id'] : 0),
                 ),
@@ -145,7 +358,7 @@ function pb_paymongo_create_checkout($conn, $opts) {
         CURLOPT_POST => true,
         CURLOPT_HTTPHEADER => array(
             'Content-Type: application/json',
-            'Authorization: Basic ' . base64_encode(PB_PAYMONGO_SECRET_KEY . ':'),
+            'Authorization: Basic ' . base64_encode($credentials['secret'] . ':'),
         ),
         CURLOPT_POSTFIELDS => json_encode($payload),
         CURLOPT_TIMEOUT => 30,

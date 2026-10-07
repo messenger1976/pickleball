@@ -60,6 +60,9 @@ $navLogoutLabel = 'Logout';
         <a class="admin-nav-link<?php echo admin_nav_active('memberships'); ?>" href="memberships.php<?php echo $navVenueQs; ?>"><span class="admin-nav-icon">🪪</span> Memberships</a>
         <a class="admin-nav-link<?php echo admin_nav_active('chat_inbox'); ?>" href="chat_inbox.php<?php echo $navVenueQs; ?>"><span class="admin-nav-icon">💬</span> Chat Inbox</a>
         <a class="admin-nav-link<?php echo admin_nav_active('business_page'); ?>" href="business_page.php<?php echo $navVenueQs; ?>"><span class="admin-nav-icon">🏪</span> Venue Page (CMS)</a>
+        <?php if (fh_auth_is_super_admin() || (isset($_SESSION['user_role']) && $_SESSION['user_role'] === FH_ROLE_BUSINESS_ADMIN)): ?>
+        <a class="admin-nav-link<?php echo admin_nav_active('paymongo_setup'); ?>" href="paymongo_setup.php<?php echo $navVenueQs; ?>"><span class="admin-nav-icon">🔑</span> PayMongo Setup</a>
+        <?php endif; ?>
         <?php if ($navVenueMode && (fh_auth_is_super_admin() || (isset($_SESSION['user_role']) && $_SESSION['user_role'] === FH_ROLE_BUSINESS_ADMIN))): ?>
         <a class="admin-nav-link<?php echo admin_nav_active('subscription'); ?>" href="subscription.php<?php echo $navVenueQs; ?>"><span class="admin-nav-icon">💎</span> Subscription</a>
         <?php endif; ?>

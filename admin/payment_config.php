@@ -1,7 +1,11 @@
 <?php
 /**
- * PayMongo config — set live/test keys for online payments.
+ * PayMongo config — platform live/test keys for online payments.
  * Leave secret empty to keep checkout in "demo mode" (marks paid locally).
+ *
+ * These are the PLATFORM keys (subscription fees, and any venue without its
+ * own PayMongo account). Per-business keys are managed in the admin under
+ * "PayMongo Setup" and stored in business_account.
  *
  * Preferred: set env vars, or create admin/payment_config.local.php (gitignored).
  */

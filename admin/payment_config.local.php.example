@@ -11,6 +11,9 @@ if (!defined('PB_PAYMONGO_SECRET_KEY')) {
 if (!defined('PB_PAYMONGO_PUBLIC_KEY')) {
     define('PB_PAYMONGO_PUBLIC_KEY', 'pk_test_YOUR_PUBLIC');
 }
+if (!defined('PB_PAYMONGO_WEBHOOK_SECRET')) {
+    define('PB_PAYMONGO_WEBHOOK_SECRET', 'whsec_YOUR_WEBHOOK_SECRET');
+}
 if (!defined('PB_SMTP_USER')) {
     define('PB_SMTP_USER', 'info@foodhauz.bohollander.com');
 }

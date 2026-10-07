@@ -81,6 +81,7 @@ if ($paidFlag === 1) {
                     'description' => 'Pickleball Portal venue subscription',
                     'business_id' => $bizId,
                     'platform_subscription_id' => (int)$sub['subscription_id'],
+                    'credentials' => 'platform',
                     'success_url' => $successUrl,
                     'cancel_url' => $cancelUrl,
                 ));
